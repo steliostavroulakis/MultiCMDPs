@@ -282,6 +282,7 @@ class Player:
         #pprint.pprint(hypothetical_effective_dict)                   
         gradient = [self.congestion_of_path(path, hypothetical_effective_dict) for path in self.paths]
         norm_grad = math.sqrt(sum([x**2 for x in gradient]))
+        # project to simplex
         new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
         sum_new_strategy = sum(new_strategy)
         new_strategy = [x / sum_new_strategy for x in new_strategy]
