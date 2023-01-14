@@ -9,6 +9,23 @@ import matplotlib.animation as anim
 import pprint
 import sys
 
+def projsplx(y):
+    s = np.sort(y)
+    n = len(y) ; flag = False
+    
+    parsum = 0
+    tmax = -np.inf
+    for idx in range(n-2, -1, -1):
+        parsum += s[idx+1]
+        tmax = (parsum - 1) / (n - (idx + 1) )
+        if tmax >= s[idx]:
+            flag = True ; break
+    
+    if not flag:
+        tmax = (np.sum(s) - 1) / n
+    
+    return np.maximum(y - tmax, 0)
+
 def total_true_congestion(G, players):
     congestion_dict = dict()
     for edge in G.edges:
@@ -265,7 +282,7 @@ class Player:
         #pprint.pprint(hypothetical_effective_dict)                   
         gradient = [self.congestion_of_path(path, hypothetical_effective_dict) for path in self.paths]
         norm_grad = math.sqrt(sum([x**2 for x in gradient]))
-        new_strategy = [max(0, self.strategy[i] - step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]
+        new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
         sum_new_strategy = sum(new_strategy)
         new_strategy = [x / sum_new_strategy for x in new_strategy]
         
