@@ -196,11 +196,14 @@ class Player:
 
         self.rewards = rewards
         self.constraints = constraints
+        # self.constraints[0] is gonna exist because python but we won't use it
+        self.constraints.insert(0, None)
         
-        assert len(self.rewards) == 1 + len(self.constraints)
+        assert len(self.rewards) == len(self.constraints)
         # using mu because lambda is a keyword
         # mu[0] is gonna exist because python but we won't use it
         self.mu = [0 for _ in self.rewards]
+        self.mu[0] = None
 
         self.kldiv = 0
 
@@ -295,15 +298,19 @@ class Player:
         # project to simplex
         new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
 
-        # TODO: check if this is necessary, maybe by printing sum_new_strategy
-        sum_new_strategy = sum(new_strategy)
-        new_strategy = [x / sum_new_strategy for x in new_strategy]
-        
         # For plotting, we will plot the KL divergence of the probability distributions:
         self.kldiv = sum(rel_entr(new_strategy, self.strategy))
         self.wasser = wasserstein_distance(new_strategy, self.strategy)
         self.strategy = new_strategy
 
+    def update_dual(self, congestion_dict, step_size=0.01):
+        for i in range(1, len(self.mu)):
+            hypothetical_dict = {edge: self.rewards[i][edge](congestion) if edge in self.edges else self.rewards[i][edge](congestion + 1)
+                                for (edge, congestion) in congestion_dict.items()}
+            expected_reward = sum([self.reward_from_path(self.paths[j], hypothetical_dict) * self.strategy[j] for j in range(len(self.paths))])
+            gradient = expected_reward - self.constraints[i]
+            self.mu[i] += gradient * step_size
+            self.mu[i] = max(0, self.mu[i])
 
 """
     # takes a step of gradient descent

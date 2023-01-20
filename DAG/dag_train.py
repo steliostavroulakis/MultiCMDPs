@@ -29,29 +29,20 @@ highway.add(('l5','l6'))
 highway.add(('l6','t'))
 
 congestion_func = lambda x: x
-congestion_func_derivative = lambda x: 1
 
 highway_congestion_func = lambda x: x / 20
-highway_congestion_func_derivative = lambda x: 1 / 20
 
 congestion_funcs = {(a, b) : highway_congestion_func if (a, b) in highway else congestion_func 
                     for a in G.nodes for b in G.nodes}
-congestion_func_derivatives = {(a, b) : highway_congestion_func_derivative if (a, b) in highway else congestion_func_derivative
-                               for a in G.nodes for b in G.nodes}
 
 gas_func = lambda x: 1
-gas_func_derivative = lambda x: 0
 
 highway_gas_func = lambda x: 2
-highway_gas_func_derivative = lambda x: 0
 
 gas_funcs = {(a, b) : highway_gas_func if (a, b) in highway else gas_func
                     for a in G.nodes for b in G.nodes}
-gas_func_derivatives = {(a, b) : highway_gas_func_derivative if (a, b) in highway else gas_func_derivative
-                    for a in G.nodes for b in G.nodes}
 
 rewards = [congestion_funcs, gas_funcs]
-reward_derivatives = [congestion_func_derivatives, gas_func_derivatives]
 
 """
 For this example, we say everybody responds the same to congestion and gas. This doesn't have to be the case!
@@ -83,7 +74,7 @@ alice_str_over_time = []
 bob_str_over_time = []
 charlie_str_over_time = []
 
-NUM_ITERATIONS = 100
+NUM_ITERATIONS = 500
 
 for i in range(NUM_ITERATIONS):
     print(f'{i}/{NUM_ITERATIONS}')
@@ -100,12 +91,12 @@ for i in range(NUM_ITERATIONS):
             congestion_dict[edge] += 1
 
     # update strategies
-    players['Alice'].update_primal(congestion_dict ,step_size=0.05)
-    players['Bob'].update_primal(congestion_dict ,step_size=0.05)
-    players['Charlie'].update_primal(congestion_dict ,step_size=0.05)
-    # players['Alice'].update_dual(step_size=0.01)
-    # players['Bob'].update_dual(step_size=0.01)
-    # players['Charlie'].update_dual(step_size=0.01)
+    players['Alice'].update_primal(congestion_dict ,step_size=0.01)
+    players['Bob'].update_primal(congestion_dict ,step_size=0.01)
+    players['Charlie'].update_primal(congestion_dict ,step_size=0.01)
+    players['Alice'].update_dual(congestion_dict, step_size=0.2)
+    players['Bob'].update_dual(congestion_dict, step_size=0.2)
+    players['Charlie'].update_dual(congestion_dict, step_size=0.2)
 
     
     """
