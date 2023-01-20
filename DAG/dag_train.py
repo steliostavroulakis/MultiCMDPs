@@ -31,8 +31,8 @@ highway.add(('l6','t'))
 congestion_func = lambda x: x
 congestion_func_derivative = lambda x: 1
 
-highway_congestion_func = lambda x: x / 2
-highway_congestion_func_derivative = lambda x: 0.5
+highway_congestion_func = lambda x: x / 20
+highway_congestion_func_derivative = lambda x: 1 / 20
 
 congestion_funcs = {(a, b) : highway_congestion_func if (a, b) in highway else congestion_func 
                     for a in G.nodes for b in G.nodes}
@@ -83,9 +83,10 @@ alice_str_over_time = []
 bob_str_over_time = []
 charlie_str_over_time = []
 
+NUM_ITERATIONS = 100
 
-for i in range(100):
-    print(f'{i}/50')
+for i in range(NUM_ITERATIONS):
+    print(f'{i}/{NUM_ITERATIONS}')
     
     # choose actions
     players['Alice'].choose_action()
@@ -99,16 +100,20 @@ for i in range(100):
             congestion_dict[edge] += 1
 
     # update strategies
-    players['Alice'].update_primal(congestion_dict ,step_size=0.01)
+    players['Alice'].update_primal(congestion_dict ,step_size=0.05)
+    players['Bob'].update_primal(congestion_dict ,step_size=0.05)
+    players['Charlie'].update_primal(congestion_dict ,step_size=0.05)
     # players['Alice'].update_dual(step_size=0.01)
+    # players['Bob'].update_dual(step_size=0.01)
+    # players['Charlie'].update_dual(step_size=0.01)
 
     
     """
     # play_game(G, players)
+    """
     alice_str_over_time.append(players['Alice'].strategy)
     bob_str_over_time.append(players['Bob'].strategy)
     charlie_str_over_time.append(players['Charlie'].strategy)
-    """
 
     # Tracking differences between distributions
     plt_kl_Alice.append(players['Alice'].kldiv)
