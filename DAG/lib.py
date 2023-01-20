@@ -9,6 +9,24 @@ import matplotlib.animation as anim
 import pprint
 import sys
 
+def save_animation(str_over_time, name):
+
+    indices = [i for i in range(len(str_over_time[0]))]
+
+    # Define the update function
+    def update(i):
+        # Clear the previous plots
+        plt.cla()
+        # Plot the function for the current frame
+        plt.bar(indices, str_over_time[i])
+
+    # Create the figure and the FuncAnimation object
+    fig = plt.figure(dpi=50)
+    ani = anim.FuncAnimation(fig, update, frames=range(len(str_over_time)), interval=150)
+    # Save the animation as a video file
+    ani.save(str(name)+'.gif', writer='pillow')
+    plt.close()
+
 def projsplx(y):
     s = np.sort(y)
     n = len(y) ; flag = False
@@ -26,15 +44,13 @@ def projsplx(y):
     
     return np.maximum(y - tmax, 0)
 
-def total_true_congestion(G, players):
+def calc_true_congestion(G, players):
     congestion_dict = dict()
     for edge in G.edges:
         congestion_dict[edge] = 0
 
     # Calculate total load
     for player in players.values():
-        #print(player.path)
-        #player.render_path()
         for edge in player.edges:
             congestion_dict[edge] +=1
     return congestion_dict
@@ -55,12 +71,12 @@ def total_effective_congestion(true_cong_dict):
     for edge in true_cong_dict:
 
         if edge in highway:
-            ret_dict[edge] = 1*true_cong_dict[edge]
+            ret_dict[edge] = 0.1*true_cong_dict[edge]
         else: 
             ret_dict[edge] = true_cong_dict[edge]
     return ret_dict
 
-def total_gas_consumption(true_cong_dict):
+def total_gas_dict(true_cong_dict):
     highway = set()
     highway.add(('s','l1'))
     highway.add(('l1','l2'))
@@ -131,79 +147,118 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def play_game(G,players):
+def primal_update(G,players):
 
-    total_cong_dict = total_true_congestion(G,players)
-    effec_cong_dict = total_effective_congestion(total_cong_dict)
-    #pprint.pprint(effec_cong_dict)
-    #sys.exit(0)
-    total_cons_dict = total_gas_consumption(total_cong_dict)
+    for _,player in players.items():
+        player.choose_action()
+        print(f"Player {player.name} selected {player.path_action}")
 
-    # # Calculate congestion for each player
-    for name,player in players.items():
-        
-        alpha = 0.1
-        player.congestion = 0
-        player.gas = 0
-        for edge in player.edges:
-            #print(edge)
-            #print(effective_congestion(edge, edge_pop_dict[edge]))
-            #print(congestion_dict[edge])
-            #break
-            #print("Printing congestion: ",effective_congestion(edge, congestion_dict))
-            player.congestion += effec_cong_dict[edge]#alpha
-            player.gas += total_cons_dict[edge] #alpha
-        #print(player.name, ":", player.congestion)
-        #print(player.gas)
-        #print(f"Player {player.name}: Congestion {player.congestion}, Gas {player.gas}")
-        #pprint.pprint(total_cons_dict)
+    total_cong_dict = calc_true_congestion(G,players)
+
+    for _,player in players.items():
+        #print("Players selected paths: ",player.path_action)
         player.update_strategy(total_cong_dict)
 
-def save_animation(str_over_time, name):
-
-    indices = [i for i in range(len(str_over_time[0]))]
-
-    # Define the update function
-    def update(i):
-        # Clear the previous plots
-        plt.cla()
-        # Plot the function for the current frame
-        plt.bar(indices, str_over_time[i])
-
-    # Create the figure and the FuncAnimation object
-    fig = plt.figure()
-    ani = anim.FuncAnimation(fig, update, frames=range(len(str_over_time)), interval=150)
-    # Save the animation as a video file
-    ani.save(str(name)+'.gif', writer='pillow')
-    plt.close()
+    #sys.exit(0)
 
 class Player:
 
-    def __init__(self, name, G, budget):
+    def __init__(self, name, G):
 
         # Save the graph inside the player class for each player to know the graph they are dealing with
         self.name = name
         self.G = G
-        # Create all paths, given the graph G that was passed into the function
         self.paths = self.find_all_paths(G,'s','t')
+        self.lamda = 0
         #print(self.paths)
-        #sys.exit(0)
-        self.path = random.sample(self.paths, 1)[0]# = len(self.paths)
-        #print(self.path)
+        #self.path = random.sample(self.paths, 1)[0]# = len(self.paths)
         #self.path = ['s', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 't']
-        self.edges = [(self.path[i], self.path[i+1]) for i in range(len(self.path)-1)]
-        self.budget = budget
-        self.congestion = 0
-        # # initialize to uniform strategy
-        # # this leads to symmetry, which is boring
+
+        # Uniform Strategy
         # self.strategy = [1 / len(self.paths) for _ in range(len(self.paths))]
-        # initialize to random strategy
+        
+        # Random strategy
         self.strategy = [random.random() for _ in range(len(self.paths))]
         sum_strategy = sum(self.strategy)
         self.strategy = [x / sum_strategy for x in self.strategy]
-        
 
-        #self.kldiv = 0
+    # Takes a step of gradient descent
+    # congestion_dict is a dict from edges to numbers
+    def update_strategy(self, true_congestion_dict, step_size=0.1, dual_step_size = 1):
+        # because the expected congestion for the player is linear w.r.t. their
+        # strategy, we can find the gradient by just finding the congestion the player
+        # would get for any particular strategy
+        # create a useful new dictionary hypthetical_dict 
+        # hypothetical_dict is congestion_dict but for each edge, it's the congestion
+        #     of that edge given that the player chooses a path with that edge
+        # think of it like this: everybody else has already played but you. If you want
+        #     to know how good a path is, add 1 to edge in that path and add the edge
+        #     weights. We just add 1 to all the edge weights preemptively here.
+        #print(self.path_action)
+
+        hypothetical_dict = {edge: congestion if edge in self.to_edge_list(self.path_action) else congestion + 1
+                            for (edge, congestion) in true_congestion_dict.items()}
+        hypothetical_effective_dict = total_effective_congestion(hypothetical_dict)
+
+        #pprint.pprint(hypothetical_effective_dict)
+        # Here we calculate the effective gradient
+        primal_gradient = [self.congestion_of_path(path, hypothetical_effective_dict) for path in self.paths]
+        norm_grad = math.sqrt(sum([x**2 for x in primal_gradient]))
+
+        print("Primal Gradient: ", primal_gradient)
+        #print("Normalized Primal Gradient: ", [num/norm_grad for num in primal_gradient])
+
+        for edge in self.edges:
+            true_congestion_dict[edge] -= 1
+
+        dual_gradient = []
+        for path in self.paths:
+            
+            hypothetical_edges = [(path[i], path[i+1]) for i in range(len(path)-1)]
+            for edge_ in hypothetical_edges:
+                true_congestion_dict[edge_] += 1
+            gas_dict = total_gas_dict(true_congestion_dict)
+            #print("Gas Dictinoary:")
+            #pprint.pprint(gas_dict)
+            total_gas = 0
+            for gas in gas_dict.values():
+                total_gas += gas
+
+            for edge_ in hypothetical_edges:
+                true_congestion_dict[edge_] -= 1
+
+            dual_gradient.append(total_gas)
+        dual_norm_grad = math.sqrt(sum([x**2 for x in dual_gradient]))
+        print("Dual Gradient: ", dual_gradient)
+
+        #new_strategy = projsplx(np.array([self.strategy[i] - (step_size * primal_gradient[i]/norm_grad) - (self.lambda_ * dual_gradient[i] / dual_norm_grad) for i in range(len(self.paths))]))
+        print("Printing old strategy ", self.strategy)
+        new_strategy = projsplx(np.array([self.strategy[i] - step_size * primal_gradient[i]/norm_grad + dual_step_size * self.lamda * dual_gradient[i]/dual_norm_grad for i in range(len(self.paths))]))
+        #new_strategy = projsplx(np.array([self.strategy[i] - (step_size * primal_gradient[i] / norm_grad) for i in range(len(self.paths))]))
+
+        # For plotting, we will plot the KL divergence and Wasserstein distance of the probability distributions:
+        self.kldiv = sum(rel_entr(new_strategy, self.strategy))
+        self.wasser = wasserstein_distance(new_strategy, self.strategy)
+        #print(self.kldiv)
+        self.strategy = new_strategy
+        print("Printing new strategy ", self.strategy)
+        #sys.exit(0)
+
+        # g(x) is the expected amount of gas you will use based on your currrent strategy self.stragegy * every_gas
+
+        exp_constr_viol = np.dot(self.strategy, dual_gradient)
+        print(exp_constr_viol)
+        self.lamda = max(0,self.lamda + dual_step_size * (20 - exp_constr_viol))
+        #self.lambda_ = min(50,self.lambda_ + dual_step_size * 10)
+        #result = [x_i + fraction * y_i for x_i, y_i in zip(x,y)]
+
+        print("New Lambda = ",self.lamda)
+        #if self.lamda == 0:
+        #    sys.exit(0)
+        #sys.exit(0)
+        #self.path_action = self.choose_action()
+        #self.edges = [(self.path_action[i], self.path_action[i+1]) for i in range(len(self.path_action)-1)]
+
 
     def render_path(self):
         self.curr_path = random.choices(self.paths, self.strategy)[0]
@@ -228,13 +283,6 @@ class Player:
     def to_edge_list(self,path):
         return [(path[i], path[i+1]) for i in range(len(path) - 1)]
 
-    # how congested is a given path, knowing how all players played?
-    def congestion_of_path(self, path, congestion_dict):
-        result = 0
-        for i in range(len(path) - 1):
-            result += congestion_dict[(path[i], path[i+1])]
-        return result
-
     def find_all_paths(self,dag, source, sink, path=[]):
         # add the source node to the current path
         path = path + [source]
@@ -251,46 +299,110 @@ class Player:
             for new_path in new_paths:
                 paths.append(new_path)
         return paths
-        
+
+    # how congested is a given path, knowing how all players played?
+    def congestion_of_path(self, path, congestion_dict):
+        result = 0
+        for i in range(len(path) - 1):
+            result += congestion_dict[(path[i], path[i+1])]
+        return result
+
     def choose_action(self):
-        # choose a random path from the set of available paths
-        action_index = np.random.choice(len(self.paths), 1, p=self.strategy)
-        self.action = self.paths[action_index]
+        # Choose a random path from the set of available paths
+        action_index = np.random.choice(len(self.paths), 1, p=self.strategy)[0]
+        action = self.paths[action_index]
+        self.path_action = action
+        self.edges = [(action[i], action[i+1]) for i in range(len(action)-1)]
+        #print(self.path_action)
 
-    def update_paths(self, new_paths):
-        # update the set of available paths
-        self.paths = new_paths
-
-    # takes a step of gradient descent
-    # congestion_dict is a dict from edges to numbers
-    def update_strategy(self, true_congestion_dict, step_size=0.1):
-        # because the expected congestion for the player is linear w.r.t. their
-        # strategy, we can find the gradient by just finding the congestion the player
-        # would get for any particular strategy
-        # create a useful new dictionary hypthetical_dict 
-        # hypothetical_dict is congestion_dict but for each edge, it's the congestion
-        #     of that edge given that the player chooses a path with that edge
-        # think of it like this: everybody else has already played but you. If you want
-        #     to know how good a path is, add 1 to edge in that path and add the edge
-        #     weights. We just add 1 to all the edge weights preemptively here.
-
-        hypothetical_dict = {edge: congestion if edge in self.to_edge_list(self.path) else congestion + 1
-                            for (edge, congestion) in true_congestion_dict.items()}
-        hypothetical_effective_dict = total_effective_congestion(hypothetical_dict)
-        #print(self.strategy)
-        #print("Hypothetical dict of ", self.name)     
-        #pprint.pprint(hypothetical_effective_dict)                   
-        gradient = [self.congestion_of_path(path, hypothetical_effective_dict) for path in self.paths]
-        norm_grad = math.sqrt(sum([x**2 for x in gradient]))
-        # project to simplex
-        new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
-        sum_new_strategy = sum(new_strategy)
-        new_strategy = [x / sum_new_strategy for x in new_strategy]
-        
-        # For plotting, we will plot the KL divergence of the probability distributions:
-        self.kldiv = sum(rel_entr(new_strategy, self.strategy))
-        self.wasser = wasserstein_distance(new_strategy, self.strategy)
-        #print(self.kldiv)
-        self.strategy = new_strategy
-        #print(self.strategy)
+    def total_gas_of_path(self,path,gas_dict):
+        #pprint.pprint(gas_dict)
         #sys.exit(0)
+        result = 0
+        for edge, gas in gas_dict.items():
+            result += gas
+        return result
+
+    def dual_update(self, G,players,total_gas_constr):
+
+        true_congestion_dict = 0
+
+        dual_gradient = []
+        for path in self.paths:
+            hypothetical_edges = [(path[i], path[i+1]) for i in range(len(path)-1)]
+            for edge_ in hypothetical_edges:
+                true_congestion_dict[edge_] += 1
+            gas_dict = total_gas_dict(true_congestion_dict)
+            total_gas = 0
+            for gas in gas_dict.values():
+                total_gas += gas
+
+            #print(f"Here we have the total gas spent {total_gas} for action {path} selected")
+
+            dual_gradient.append(total_gas)
+        dual_norm_grad = math.sqrt(sum([x**2 for x in dual_gradient]))
+
+        #print("Printing Dual Gradient: ", dual_gradient)
+        print("Lagrangian Multiplier: ", self.lambda_)
+        #sys.exit(0)
+        #print(gradient)
+        #sys.exit(0)
+        print("Printing prev strategy ", self.strategy)
+
+    # def update_lambda(self,true_congestion_dict, total_gas_constr, step_size=0.1):
+
+    #     #print(self.edges)
+    #     #pprint.pprint(true_congestion_dict)
+    #     for edge in self.edges:
+    #         true_congestion_dict[edge] -=1
+        
+    #     print("Before consideration, reduced congestion dict = ")
+    #     pprint.pprint(true_congestion_dict)
+
+    #     gradient = []
+    #     for path in self.paths:
+    #         hypothetical_edges = [(path[i], path[i+1]) for i in range(len(path)-1)]
+    #         for edge_ in hypothetical_edges:
+    #             true_congestion_dict[edge_] += 1
+    #         gas_dict = total_gas_dict(true_congestion_dict)
+    #         total_gas = 0
+    #         for gas in gas_dict.values():
+    #             total_gas += gas
+
+    #         print(f"Here we have the total gas spent {total_gas} for action {path} selected")
+
+    #         gradient.append(total_gas)
+
+    #     pprint.pprint(gradient)
+    #     self.lambdas = [x + step_size*y for x,y in zip(self.lambdas,gradient)]
+    #     self.lambdas = np.maximum(self.lambdas, 0)
+    #     print("New Lambda = ", self.lambdas)
+
+
+    #     #sys.exit(0)
+
+    #     #pprint.pprint(true_congestion_dict)
+
+
+    #     #hypothetical_dict = {edge: congestion if edge in self.to_edge_list(self.path_action) else congestion + 1
+    #     #                    for (edge, congestion) in true_congestion_dict.items()}
+    #     #pprint.pprint(hypothetical_dict)
+    #     sys.exit(0)
+    #     hypothetical_gas_dict = total_gas_consumption(hypothetical_dict)
+
+    #     #pprint.pprint(hypothetical_gas_dict)
+    #     #sys.exit(0)
+    #     gradient = [self.total_gas_of_path(path, hypothetical_gas_dict) for path in self.paths]
+    #     print(gradient)
+    #     sys.exit(0)
+    #     norm_grad = math.sqrt(sum([x**2 for x in gradient]))
+
+    #     self.lambda_ = self.lambda_ + step_size * (total_gas - total_gas_constr)
+    #     print(self.lambda_)
+    #     print(self.strategy)
+    #     #print([np.exp(self.lambda_*) / sum([self.strategy[i] * np.exp(self.lambda_)]) for i in range(len(self.strategy))])
+
+    #     sys.exit(0)
+
+    #     lambda_ = lambda_ + step_size * (total_gas - total_gas_constr)
+    #     policy = policy * np.exp(lambda_ * rewards) / sum(policy * np.exp(lambda_ * rewards))

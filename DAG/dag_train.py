@@ -13,16 +13,17 @@ import sys
 from lib import create_dag
 from lib import print_dag
 from lib import Player
-from lib import play_game
+from lib import primal_update
+#from lib import dual_update
 from lib import save_animation
 
 G = create_dag()
 #print_dag(G)
 
 players = dict()
-players['Alice'] = Player('Alice',G,5)
-players['Bob'] = Player('Bob',G,5)
-players['Charlie'] = Player('Charlie',G,3)
+players['Alice'] = Player('Alice',G)
+players['Bob'] = Player('Bob',G)
+players['Charlie'] = Player('Charlie',G)
 
 #print(players['Charlie'].strategy)
 
@@ -40,10 +41,15 @@ alice_str_over_time = []
 bob_str_over_time = []
 charlie_str_over_time = []
 
+iterates = 1000
+total_gas_constr = 20
+lamda = 0
 
-for i in range(100):
-    print(f"{i}/50")
-    play_game(G,players)
+for i in range(iterates):
+    print(f"Starting Iteration {i}/{iterates}")
+    primal_update(G,players)
+    #dual_update(G,players,total_gas_constr)
+
     alice_str_over_time.append(players['Alice'].strategy)
     bob_str_over_time.append(players['Bob'].strategy)
     charlie_str_over_time.append(players['Charlie'].strategy)
@@ -61,9 +67,9 @@ print(alice_str_over_time[-1])
 print(bob_str_over_time[-1])
 print(charlie_str_over_time[-1])
 
-save_animation(alice_str_over_time,'Alice')
-save_animation(bob_str_over_time,'Bob')
-save_animation(charlie_str_over_time,'Charlie')
+#save_animation(alice_str_over_time,'Alice')
+#save_animation(bob_str_over_time,'Bob')
+#save_animation(charlie_str_over_time,'Charlie')
 
 plt.plot(plt_kl_Alice)
 plt.plot(plt_kl_Bob)
