@@ -19,14 +19,57 @@ from lib import save_animation
 G = create_dag()
 #print_dag(G)
 
+highway = set()
+highway.add(('s','l1'))
+highway.add(('l1','l2'))
+highway.add(('l2','l3'))
+highway.add(('l3','l4'))
+highway.add(('l4','l5'))
+highway.add(('l5','l6'))
+highway.add(('l6','t'))
+
+congestion_func = lambda x: x
+congestion_func_derivative = lambda x: 1
+
+highway_congestion_func = lambda x: x / 2
+highway_congestion_func_derivative = lambda x: 0.5
+
+congestion_funcs = {(a, b) : highway_congestion_func if (a, b) in highway else congestion_func 
+                    for a in G.nodes for b in G.nodes}
+congestion_func_derivatives = {(a, b) : highway_congestion_func_derivative if (a, b) in highway else congestion_func_derivative
+                               for a in G.nodes for b in G.nodes}
+
+gas_func = lambda x: 1
+gas_func_derivative = lambda x: 0
+
+highway_gas_func = lambda x: 2
+highway_gas_func_derivative = lambda x: 0
+
+gas_funcs = {(a, b) : highway_gas_func if (a, b) in highway else gas_func
+                    for a in G.nodes for b in G.nodes}
+gas_func_derivatives = {(a, b) : highway_gas_func_derivative if (a, b) in highway else gas_func_derivative
+                    for a in G.nodes for b in G.nodes}
+
+rewards = [congestion_funcs, gas_funcs]
+reward_derivatives = [congestion_func_derivatives, gas_func_derivatives]
+
+"""
+For this example, we say everybody responds the same to congestion and gas. This doesn't have to be the case!
+The model is perfectly capable of letting someone be on a motorcycle and be able to weave through congested traffic
+or be in a hybrid and have better fuel economy off the highway compared to others
+"""
+
 players = dict()
-players['Alice'] = Player('Alice',G,5)
-players['Bob'] = Player('Bob',G,5)
-players['Charlie'] = Player('Charlie',G,3)
+players['Alice']   = Player('Alice'  , G, rewards, [16])
+players['Bob']     = Player('Bob'    , G, rewards, [5] )
+players['Charlie'] = Player('Charlie', G, rewards, [8] )
 
-#print(players['Charlie'].strategy)
+"""
+Alice has a higher gas restriction: this cannot model how much gas she has in her tank because it is a constraint on expectation.
+Perhaps this is a commute that she makes daily, and she is willing to spend a certain amount of money on gas on average.
 
-#sys.exit(0)
+In this case then, we could say that Bob and Charlie would not be able to afford to take the highway all of the time, but Alice could.
+"""
 
 plt_kl_Alice = []
 plt_kl_Bob = []
@@ -42,11 +85,30 @@ charlie_str_over_time = []
 
 
 for i in range(100):
-    print(f"{i}/50")
-    play_game(G,players)
+    print(f'{i}/50')
+    
+    # choose actions
+    players['Alice'].choose_action()
+    players['Bob'].choose_action()
+    players['Charlie'].choose_action()
+
+    # calculate congestion of each edge
+    congestion_dict = {edge : 0 for edge in G.edges}
+    for player in players.values():
+        for edge in player.edges:
+            congestion_dict[edge] += 1
+
+    # update strategies
+    players['Alice'].update_primal(congestion_dict ,step_size=0.01)
+    # players['Alice'].update_dual(step_size=0.01)
+
+    
+    """
+    # play_game(G, players)
     alice_str_over_time.append(players['Alice'].strategy)
     bob_str_over_time.append(players['Bob'].strategy)
     charlie_str_over_time.append(players['Charlie'].strategy)
+    """
 
     # Tracking differences between distributions
     plt_kl_Alice.append(players['Alice'].kldiv)

@@ -131,6 +131,7 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
+
 def play_game(G,players):
 
     total_cong_dict = total_true_congestion(G,players)
@@ -179,21 +180,12 @@ def save_animation(str_over_time, name):
 
 class Player:
 
-    def __init__(self, name, G, budget):
-
-        # Save the graph inside the player class for each player to know the graph they are dealing with
+    def __init__(self, name, G, rewards, constraints):
         self.name = name
+        # Save the graph inside the player class for each player to know the graph they are dealing with
         self.G = G
         # Create all paths, given the graph G that was passed into the function
         self.paths = self.find_all_paths(G,'s','t')
-        #print(self.paths)
-        #sys.exit(0)
-        self.path = random.sample(self.paths, 1)[0]# = len(self.paths)
-        #print(self.path)
-        #self.path = ['s', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 't']
-        self.edges = [(self.path[i], self.path[i+1]) for i in range(len(self.path)-1)]
-        self.budget = budget
-        self.congestion = 0
         # # initialize to uniform strategy
         # # this leads to symmetry, which is boring
         # self.strategy = [1 / len(self.paths) for _ in range(len(self.paths))]
@@ -201,9 +193,16 @@ class Player:
         self.strategy = [random.random() for _ in range(len(self.paths))]
         sum_strategy = sum(self.strategy)
         self.strategy = [x / sum_strategy for x in self.strategy]
-        
 
-        #self.kldiv = 0
+        self.rewards = rewards
+        self.constraints = constraints
+        
+        assert len(self.rewards) == 1 + len(self.constraints)
+        # using mu because lambda is a keyword
+        # mu[0] is gonna exist because python but we won't use it
+        self.mu = [0 for _ in self.rewards]
+
+        self.kldiv = 0
 
     def render_path(self):
         self.curr_path = random.choices(self.paths, self.strategy)[0]
@@ -227,12 +226,12 @@ class Player:
     # Define a function to turn a path into a list of edges
     def to_edge_list(self,path):
         return [(path[i], path[i+1]) for i in range(len(path) - 1)]
-
-    # how congested is a given path, knowing how all players played?
-    def congestion_of_path(self, path, congestion_dict):
+    
+    # what is the reward from a given path, knowing how all players played?
+    def reward_from_path(self, path, hypothetical_dict):
         result = 0
         for i in range(len(path) - 1):
-            result += congestion_dict[(path[i], path[i+1])]
+            result += hypothetical_dict[(path[i], path[i+1])]
         return result
 
     def find_all_paths(self,dag, source, sink, path=[]):
@@ -254,13 +253,59 @@ class Player:
         
     def choose_action(self):
         # choose a random path from the set of available paths
-        action_index = np.random.choice(len(self.paths), 1, p=self.strategy)
-        self.action = self.paths[action_index]
+        action_index = np.random.choice(len(self.paths), 1, p=self.strategy)[0]
+        self.path = self.paths[action_index]
+        self.edges = [(self.path[i], self.path[i+1]) for i in range(len(self.path)-1)]
 
     def update_paths(self, new_paths):
         # update the set of available paths
         self.paths = new_paths
 
+    # takes a step in the strategy with respect to the gradient of the lagrangian $\mathcal{L}(x, \lambda) = r_0 (x, \lambda) + \sum_i (\mu_i (c_i - r_i (x)))$
+    # congestion_dict is a dict from edges to numbers
+    def update_primal(self, congestion_dict, step_size=0.01):
+        # first, we find the gradient of the congestion ($\nabla_x r_0 (x, \lambda)$)
+        
+        # because the expected congestion for the player is linear w.r.t. their
+        # strategy, we can find the gradient by just finding the congestion the player
+        # would get for any particular strategy
+        # create a useful new dictionary hypthetical_dict 
+        # hypothetical_dict is congestion_dict but for each edge, it's the congestion
+        #     of that edge given that the player chooses a path with that edge
+        # think of it like this: everybody else has already played but you. If you want
+        #     to know how good a path is, add 1 to edge in that path and add the edge
+        #     weights. We just add 1 to all the edge weights preemptively here.
+       
+        reward_gradients = [None for _ in self.rewards]
+        reward_gradient_norms = [None for _ in self.rewards]
+        for i in range(len(self.rewards)):
+            hypothetical_dict = {edge: self.rewards[i][edge](congestion) if edge in self.edges else self.rewards[i][edge](congestion + 1)
+                                for (edge, congestion) in congestion_dict.items()}
+            reward_gradients[i] = [self.reward_from_path(path, hypothetical_dict) for path in self.paths]
+            reward_gradient_norms[i] = math.sqrt(sum([x**2 for x in reward_gradients[i]]))
+        
+        gradient = [None for _ in self.paths]
+        gradient = [reward_gradients[0][j]/reward_gradient_norms[0] for j in range(len(self.paths))]
+        for i in range(1, len(self.rewards)):
+            print(i)
+            gradient = [gradient[j] + self.mu[i] * reward_gradients[i][j]/reward_gradient_norms[i] for j in range(len(self.paths))]
+
+        norm_grad = math.sqrt(sum([x**2 for x in gradient]))
+
+        # project to simplex
+        new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
+
+        # TODO: check if this is necessary, maybe by printing sum_new_strategy
+        sum_new_strategy = sum(new_strategy)
+        new_strategy = [x / sum_new_strategy for x in new_strategy]
+        
+        # For plotting, we will plot the KL divergence of the probability distributions:
+        self.kldiv = sum(rel_entr(new_strategy, self.strategy))
+        self.wasser = wasserstein_distance(new_strategy, self.strategy)
+        self.strategy = new_strategy
+
+
+"""
     # takes a step of gradient descent
     # congestion_dict is a dict from edges to numbers
     def update_strategy(self, true_congestion_dict, step_size=0.1):
@@ -294,3 +339,4 @@ class Player:
         self.strategy = new_strategy
         #print(self.strategy)
         #sys.exit(0)
+"""
