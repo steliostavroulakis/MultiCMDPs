@@ -11,9 +11,9 @@ import pprint
 import sys
 
 from lib import create_dag
+from lib import gradient_descent_ascent
 from lib import print_dag
 from lib import Player
-from lib import primal_update
 #from lib import dual_update
 from lib import save_animation
 
@@ -41,13 +41,15 @@ alice_str_over_time = []
 bob_str_over_time = []
 charlie_str_over_time = []
 
-iterates = 1000
+iterates = 20000
 total_gas_constr = 20
-lamda = 0
+lamda = [0]
 
 for i in range(iterates):
     print(f"Starting Iteration {i}/{iterates}")
-    primal_update(G,players)
+    
+    gradient_descent_ascent(G,players, lamda)
+    #sys.exit(0)
     #dual_update(G,players,total_gas_constr)
 
     alice_str_over_time.append(players['Alice'].strategy)
@@ -55,13 +57,13 @@ for i in range(iterates):
     charlie_str_over_time.append(players['Charlie'].strategy)
 
     # Tracking differences between distributions
-    plt_kl_Alice.append(players['Alice'].kldiv)
-    plt_kl_Bob.append(players['Bob'].kldiv)
-    plt_kl_Charlie.append(players['Charlie'].kldiv)
+    # plt_kl_Alice.append(players['Alice'].kldiv)
+    # plt_kl_Bob.append(players['Bob'].kldiv)
+    # plt_kl_Charlie.append(players['Charlie'].kldiv)
 
-    plt_wass_Alice.append(players['Alice'].wasser)
-    plt_wass_Bob.append(players['Bob'].wasser)
-    plt_wass_Charlie.append(players['Charlie'].wasser)
+    # plt_wass_Alice.append(players['Alice'].wasser)
+    # plt_wass_Bob.append(players['Bob'].wasser)
+    # plt_wass_Charlie.append(players['Charlie'].wasser)
 
 print(alice_str_over_time[-1])
 print(bob_str_over_time[-1])
@@ -71,20 +73,20 @@ print(charlie_str_over_time[-1])
 #save_animation(bob_str_over_time,'Bob')
 #save_animation(charlie_str_over_time,'Charlie')
 
-plt.plot(plt_kl_Alice)
-plt.plot(plt_kl_Bob)
-plt.plot(plt_kl_Charlie)
-plt.savefig('probs.jpg')
-plt.close()
+# plt.plot(plt_kl_Alice)
+# plt.plot(plt_kl_Bob)
+# plt.plot(plt_kl_Charlie)
+# plt.savefig('probs.jpg')
+# plt.close()
 
-plt.plot(plt_wass_Alice)
-plt.plot(plt_wass_Bob)
-plt.plot(plt_wass_Charlie)
-plt.savefig('probs_wasser.jpg')
-plt.close()
+# plt.plot(plt_wass_Alice)
+# plt.plot(plt_wass_Bob)
+# plt.plot(plt_wass_Charlie)
+# plt.savefig('probs_wasser.jpg')
+# plt.close()
 
-for player in players.values():
-    player.render_path()
+# for player in players.values():
+#     player.render_path()
 
 #for name, player in players.items():
 #  print("Player: ,",name,": Congestion: ",player.congestion)
