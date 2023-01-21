@@ -9,6 +9,7 @@ import numpy as np
 import math
 import pprint
 import sys
+import os
 
 from lib import create_dag
 from lib import gradient_descent_ascent
@@ -23,9 +24,15 @@ plt.style.use('ggplot')
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005)
 parser.add_argument('-d', '--dual_step_size', type=float, default=0.01)
+parser.add_argument('-f', '--pic_folder', type=str, default='.')
 args = parser.parse_args()
 step_size = args.primal_step_size
 dual_step_size = args.dual_step_size
+pic_folder = args.pic_folder
+if pic_folder[-1] != '/':
+    pic_folder += '/'
+if not os.path.exists(pic_folder):
+    os.mkdir(pic_folder)
 
 G = create_dag()
 #print_dag(G)
@@ -111,7 +118,7 @@ for knob in knobs:
     plt.setp(axs, xticks=y_pos, xticklabels=bars)
     plt.subplots_adjust(left=0.1, right=0.9, bottom = 0.2)
     fig.text(0.5, 0.05, f'Total gas constraint: {knob}', ha='center', fontsize='14')
-    plt.savefig('experiment_result_{}.png'.format(total_gas_bound))
+    plt.savefig(pic_folder + 'experiment_result_{}.png'.format(total_gas_bound))
     plt.close()
 
     #save_animation(alice_str_over_time,'Alice')
