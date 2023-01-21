@@ -22,12 +22,13 @@ plt.style.use('ggplot')
 
 # To modify arguments easier
 parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005)
-parser.add_argument('-d', '--dual_step_size', type=float, default=0.01)
-parser.add_argument('-f', '--pic_folder', type=str, default='.')
+parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005, help='Primal step size')
+parser.add_argument('-d', '--dual_step_size', type=float, default=0.01, help='Dual update size')
+parser.add_argument('-i', '--iterates', type=int, default=15000, help='Iteration')
+parser.add_argument('-f', '--pic_folder', type=str, default='.', help='Folder for generated pictures')
 args = parser.parse_args()
-step_size = args.primal_step_size
 dual_step_size = args.dual_step_size
+iterates = args.iterates
 pic_folder = args.pic_folder
 if pic_folder[-1] != '/':
     pic_folder += '/'
@@ -43,6 +44,7 @@ knobs = np.round(log_space).astype(int)
 #sys.exit(0)
 
 for knob in knobs:
+    print('knob', knob)
 
     players = dict()
     players['Alice'] = Player('Alice',G)
@@ -65,12 +67,13 @@ for knob in knobs:
     bob_str_over_time = []
     charlie_str_over_time = []
 
-    iterates = 15000
+    #iterates = 15000
     lamda = [0]
     total_gas_bound = knob
 
     for i in range(iterates):
-        print(f"Starting Iteration {i}/{iterates}")
+        if not i % 1000:
+            print(f"Starting Iteration {i}/{iterates}")
         
         gradient_descent_ascent(G,players, lamda, total_gas_bound, step_size, dual_step_size)
 
