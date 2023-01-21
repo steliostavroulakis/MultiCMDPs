@@ -157,7 +157,7 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def gradient_descent_ascent(G,players, lamda):
+def gradient_descent_ascent(G,players, lamda, total_gas_bound):
 
     total_cong_dict = total_expected_load(G,players)
 
@@ -168,18 +168,20 @@ def gradient_descent_ascent(G,players, lamda):
 
     # Calculate total gas consumption
     gas_dict = total_gas_dict(total_cong_dict)
-    #print("Gas Dictinoary:")
-    #pprint.pprint(gas_dict)
     total_gas = 0
     for gas in gas_dict.values():
         total_gas += gas
 
-    violation = total_gas - 10
+    violation = total_gas - total_gas_bound
 
     # Update Primal and Dual Variables
-    step_size = 0.0005
+    step_size = 0.00005
     for idx,(_,player) in enumerate(players.items()):
+
+        new_strategy = player.strategy
         player.strategy = projsplx(player.strategy - step_size * all_grads[idx])
+        player.kldiv = sum(rel_entr(new_strategy, player.strategy))
+        player.wasser = wasserstein_distance(new_strategy, player.strategy)
         
     # Update multiplier
     dual_step_size = 0.01
