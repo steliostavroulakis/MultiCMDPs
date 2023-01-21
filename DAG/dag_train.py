@@ -16,7 +16,16 @@ from lib import print_dag
 from lib import Player
 #from lib import dual_update
 from lib import save_animation
+import argparse
 plt.style.use('ggplot')
+
+# To modify arguments easier
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005)
+parser.add_argument('-d', '--dual_step_size', type=float, default=0.01)
+args = parser.parse_args()
+step_size = args.primal_step_size
+dual_step_size = args.dual_step_size
 
 G = create_dag()
 #print_dag(G)
@@ -56,7 +65,7 @@ for knob in knobs:
     for i in range(iterates):
         print(f"Starting Iteration {i}/{iterates}")
         
-        gradient_descent_ascent(G,players, lamda, total_gas_bound)
+        gradient_descent_ascent(G,players, lamda, total_gas_bound, step_size, dual_step_size)
 
         alice_str_over_time.append(players['Alice'].strategy)
         bob_str_over_time.append(players['Bob'].strategy)

@@ -157,7 +157,7 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def gradient_descent_ascent(G,players, lamda, total_gas_bound):
+def gradient_descent_ascent(G,players, lamda, total_gas_bound, step_size=0.00005, dual_step_size=0.01):
 
     total_cong_dict = total_expected_load(G,players)
 
@@ -175,7 +175,6 @@ def gradient_descent_ascent(G,players, lamda, total_gas_bound):
     violation = total_gas - total_gas_bound
 
     # Update Primal and Dual Variables
-    step_size = 0.00005
     for idx,(_,player) in enumerate(players.items()):
 
         new_strategy = player.strategy
@@ -184,7 +183,6 @@ def gradient_descent_ascent(G,players, lamda, total_gas_bound):
         player.wasser = wasserstein_distance(new_strategy, player.strategy)
         
     # Update multiplier
-    dual_step_size = 0.01
     lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
 
 class Player:
