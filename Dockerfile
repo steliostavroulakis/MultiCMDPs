@@ -3,8 +3,14 @@ FROM python:3
 # Install JupyterLab
 RUN python -m pip install jupyterlab
 
+# Copy the requirements.txt in a seperate build (https://stackoverflow.com/questions/34398632)
+COPY requirements.txt /app/requirements.txt
+
 # Set the working directory to /app
 WORKDIR /app
+
+# Install requirements
+RUN pip install -r requirements.txt
 
 # Copy the current directory contents into the container at /app
 COPY . /app
