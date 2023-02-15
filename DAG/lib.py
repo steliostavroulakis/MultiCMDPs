@@ -64,7 +64,7 @@ def projsplx(y):
     
     return np.maximum(y - tmax, 0)
    
-def total_effective_congestion(true_cong_dict):
+def total_effective_congestion(true_cong_dict, path=[]):
 
     highway = set()
     highway.add(('s','l1'))
@@ -78,11 +78,11 @@ def total_effective_congestion(true_cong_dict):
     ret_dict = dict()
 
     for edge in true_cong_dict:
-
+        cong = true_cong_dict[edge] + 1 if edge in path else true_cong_dict[edge]
         if edge in highway:
-            ret_dict[edge] = 0.1*true_cong_dict[edge]
+            ret_dict[edge] = 0.1*cong
         else: 
-            ret_dict[edge] = true_cong_dict[edge]
+            ret_dict[edge] = cong
 
     return ret_dict
 
@@ -214,11 +214,12 @@ class Player:
         complement_dict = {key: exp_visitation[key] - self_visitation[key] for key in exp_visitation.keys()}
         #hypothetical_effective_dict = total_effective_congestion(hypothetical_dict)
 
-        congestion_dict = total_effective_congestion(exp_visitation)
+        #congestion_dict = total_effective_congestion(exp_visitation)
 
         #pprint.pprint(hypothetical_effective_dict)
         # Here we calculate the effective gradient
-        primal_gradient = [self.congestion_of_path(path, congestion_dict) for path in self.paths]
+        #primal_gradient = [self.congestion_of_path(path, congestion_dict) for path in self.paths]
+        primal_gradient = [self.congestion_of_path(path, complement_dict) for path in self.paths]
         #norm_grad = math.sqrt(sum([x**2 for x in primal_gradient]))
 
         constr_gradient = []
@@ -365,9 +366,11 @@ class Player:
 
     # how congested is a given path, knowing how all players played?
     def congestion_of_path(self, path, congestion_dict):
+        path = list(zip(path, path[1:]))
+        true_congestion_dict = total_effective_congestion(congestion_dict, path)
         result = 0
-        for i in range(len(path) - 1):
-            result += congestion_dict[(path[i], path[i+1])]
+        for edge in path:
+            result += true_congestion_dict[edge]
         return result
 
     def choose_action(self):
