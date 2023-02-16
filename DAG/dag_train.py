@@ -24,10 +24,14 @@ plt.style.use('ggplot')
 
 # To modify arguments easier
 parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005, help='Primal step size')
-parser.add_argument('-d', '--dual_step_size', type=float, default=0.01, help='Dual update size')
-parser.add_argument('-i', '--iterates', type=int, default=15000, help='Iteration')
-parser.add_argument('-f', '--pic_folder', type=str, default='.', help='Folder for generated pictures')
+parser.add_argument('-p', '--primal_step_size', type=float, default=0.00005,
+                    help='Primal step size')
+parser.add_argument('-d', '--dual_step_size', type=float, default=0.01,
+                    help='Dual update size')
+parser.add_argument('-i', '--iterates', type=int, default=15000,
+                    help='Iteration')
+parser.add_argument('-f', '--pic_folder', type=str, default='.',
+                    help='Folder for generated pictures')
 args = parser.parse_args()
 step_size = args.primal_step_size
 dual_step_size = args.dual_step_size
