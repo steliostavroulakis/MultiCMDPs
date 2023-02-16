@@ -6,6 +6,7 @@ After 500 iterations, the strategies looked like this:
 [0. 0. 0. 0. 1.]
 [0.         0.00521487 0.00521487 0.98957025 0.        ]
 [0.15812625 0.         0.         0.         0.84187375]
+Note that the first four choices are on non-highway roads, and the fifth choice is to take the highway.
 
 You can see that Bob is underutilizing his gas. 
 The cycles of lambda are really bad here. When the slope of the lambda graph is very positive, Bob is using
@@ -19,7 +20,7 @@ over the delicate balance. Pretty cool!
 Parameters for future reference:
 step sizes are 0.1 for primal and 0.1 for dual
 Alice gas is 16, Bob gas 5, Charlie gas 8
-highway has 1/10 congestion, 2 times the gas
+highway has 1/10 congestion, 2 times the gas cost
 
 
 
