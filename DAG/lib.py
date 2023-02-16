@@ -107,7 +107,7 @@ def save_line_chart(str_over_time, player_names, bars, show_avg=True,
         axs[i].legend(bars)
         axs[i].set_title(name)
         axs[i].set_xlabel('Iteration')
-        axs[i].set_ylim([0, 1])
+        axs[i].set_ylim([-0.025, 1.025])
         axs[i].axhline(y=0.25, color='gray', linestyle='--')
     axs[0].set_ylabel('Probability') # set y label only for the left most axis
 
@@ -117,7 +117,7 @@ def save_line_chart(str_over_time, player_names, bars, show_avg=True,
         axs[-1].legend(bars)
         axs[-1].set_title('Average')
         axs[-1].set_xlabel('Iteration')
-        axs[-1].set_ylim([0, 1])
+        axs[-1].set_ylim([-0.025, 1.025])
         axs[-1].axhline(y=0.25, color='gray', linestyle='--')
 
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.2)
