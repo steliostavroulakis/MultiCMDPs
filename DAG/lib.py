@@ -178,6 +178,11 @@ def save_animation(str_over_time, name):
     ani.save(str(name)+'.gif', writer='pillow')
     plt.close()
 
+
+# Define a function to turn a path into a list of edges
+def to_edge_list(path):
+    return [(path[i], path[i+1]) for i in range(len(path) - 1)]
+
 class Player:
 
     def __init__(self, name, G, rewards, constraints):
@@ -226,15 +231,12 @@ class Player:
         nx.draw_networkx_nodes(self.G, pos, nodelist=self.curr_path, node_color='red', node_size=500)
         plt.savefig(self.name+"_path.png")
 
-    # Define a function to turn a path into a list of edges
-    def to_edge_list(self,path):
-        return [(path[i], path[i+1]) for i in range(len(path) - 1)]
     
     # what is the reward from a given path, knowing how all players played?
-    def reward_from_path(self, path, hypothetical_dict):
+    def reward_from_path(self, path, hypothetical_dict, reward_index):
         result = 0
-        for i in range(len(path) - 1):
-            result += hypothetical_dict[(path[i], path[i+1])]
+        for edge in to_edge_list(path):
+            result += self.rewards[reward_index][edge](hypothetical_dict[edge])
         return result
 
     def find_all_paths(self,dag, source, sink, path=[]):
@@ -266,48 +268,62 @@ class Player:
 
     # takes a step in the strategy with respect to the gradient of the lagrangian $\mathcal{L}(x, \lambda) = r_0 (x, \lambda) + \sum_i (\mu_i (c_i - r_i (x)))$
     # congestion_dict is a dict from edges to numbers
-    def update_primal(self, congestion_dict, step_size=0.01):
+    def update_primal(self, expected_congestion_dict, step_size=0.01):
         # first, we find the gradient of the congestion ($\nabla_x r_0 (x, \lambda)$)
         
         # because the expected congestion for the player is linear w.r.t. their
-        # strategy, we can find the gradient by just finding the congestion the player
+        # strategy, we can find the gradient by just finding the expected congestion the player
         # would get for any particular strategy
-        # create a useful new dictionary hypthetical_dict 
-        # hypothetical_dict is congestion_dict but for each edge, it's the congestion
-        #     of that edge given that the player chooses a path with that edge
+        # create a useful new dictionary hypothetical_dict
+        # hypothetical_dict is congestion_dict but for each edge, it's the expected congestion
+        #     of that edge given that the player deterministically chooses a path with that edge
         # think of it like this: everybody else has already played but you. If you want
         #     to know how good a path is, add 1 to edge in that path and add the edge
         #     weights. We just add 1 to all the edge weights preemptively here.
+
        
         reward_gradients = [None for _ in self.rewards]
         reward_gradient_norms = [None for _ in self.rewards]
         for i in range(len(self.rewards)):
-            hypothetical_dict = {edge: self.rewards[i][edge](congestion) if edge in self.edges else self.rewards[i][edge](congestion + 1)
-                                for (edge, congestion) in congestion_dict.items()}
-            reward_gradients[i] = [self.reward_from_path(path, hypothetical_dict) for path in self.paths]
+
+            hypothetical_dict = {x: y+1 for (x, y) in expected_congestion_dict.items()}
+            for j in range(len(self.strategy)):
+                for edge in to_edge_list(self.paths[j]):
+                    hypothetical_dict[edge] -= self.strategy[j]
+
+            reward_gradients[i] = [self.reward_from_path(path, hypothetical_dict, i) for path in self.paths]
             reward_gradient_norms[i] = math.sqrt(sum([x**2 for x in reward_gradients[i]]))
+
         
         gradient = [None for _ in self.paths]
-        gradient = [reward_gradients[0][j]/reward_gradient_norms[0] for j in range(len(self.paths))]
+        # removing normalization
+        # gradient = [reward_gradients[0][j]/reward_gradient_norms[0] for j in range(len(self.paths))]
+        gradient = [reward_gradients[0][j] for j in range(len(self.paths))]
         for i in range(1, len(self.rewards)):
-            print(i)
             gradient = [gradient[j] + self.mu[i] * reward_gradients[i][j]/reward_gradient_norms[i] for j in range(len(self.paths))]
 
         norm_grad = math.sqrt(sum([x**2 for x in gradient]))
 
         # project to simplex
-        new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
+        # removing normalization
+        # new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i] / norm_grad) for i in range(len(self.paths))]))
+        new_strategy = projsplx(np.array([self.strategy[i] - (step_size * gradient[i]) for i in range(len(self.paths))]))
 
         # For plotting, we will plot the KL divergence of the probability distributions:
         self.kldiv = sum(rel_entr(new_strategy, self.strategy))
         self.wasser = wasserstein_distance(new_strategy, self.strategy)
         self.strategy = new_strategy
 
-    def update_dual(self, congestion_dict, step_size=0.01):
+
+    def update_dual(self, expected_congestion_dict, step_size=0.01):
         for i in range(1, len(self.mu)):
-            hypothetical_dict = {edge: self.rewards[i][edge](congestion) if edge in self.edges else self.rewards[i][edge](congestion + 1)
-                                for (edge, congestion) in congestion_dict.items()}
-            expected_reward = sum([self.reward_from_path(self.paths[j], hypothetical_dict) * self.strategy[j] for j in range(len(self.paths))])
+
+            hypothetical_dict = {x: y+1 for (x, y) in expected_congestion_dict.items()}
+            for j in range(len(self.strategy)):
+                for edge in to_edge_list(self.paths[j]):
+                    hypothetical_dict[edge] -= self.strategy[j]
+
+            expected_reward = sum([self.reward_from_path(self.paths[j], hypothetical_dict, i) * self.strategy[j] for j in range(len(self.paths))])
             gradient = expected_reward - self.constraints[i]
             self.mu[i] += gradient * step_size
             self.mu[i] = max(0, self.mu[i])

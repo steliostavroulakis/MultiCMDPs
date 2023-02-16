@@ -15,6 +15,7 @@ from lib import print_dag
 from lib import Player
 from lib import play_game
 from lib import save_animation
+from lib import to_edge_list
 
 G = create_dag()
 #print_dag(G)
@@ -30,7 +31,7 @@ highway.add(('l6','t'))
 
 congestion_func = lambda x: x
 
-highway_congestion_func = lambda x: x / 20
+highway_congestion_func = lambda x: x / 10
 
 congestion_funcs = {(a, b) : highway_congestion_func if (a, b) in highway else congestion_func 
                     for a in G.nodes for b in G.nodes}
@@ -74,34 +75,28 @@ alice_str_over_time = []
 bob_str_over_time = []
 charlie_str_over_time = []
 
-NUM_ITERATIONS = 500
+bob_lambda_over_time= []
+bob_highway_over_time = []
+
+NUM_ITERATIONS = 5000
 
 for i in range(NUM_ITERATIONS):
-    print(f'{i}/{NUM_ITERATIONS}')
-    
-    # choose actions
-    players['Alice'].choose_action()
-    players['Bob'].choose_action()
-    players['Charlie'].choose_action()
+    print(f'{i+1}/{NUM_ITERATIONS}')
 
-    # calculate congestion of each edge
-    congestion_dict = {edge : 0 for edge in G.edges}
+    # calculate expected congestion of each edge
+    expected_congestion_dict = {edge : 0 for edge in G.edges}
     for player in players.values():
-        for edge in player.edges:
-            congestion_dict[edge] += 1
+        for i in range(len(player.strategy)):
+            for edge in to_edge_list(player.paths[i]):
+                expected_congestion_dict[edge] += player.strategy[i]
 
-    # update strategies
-    players['Alice'].update_primal(congestion_dict ,step_size=0.01)
-    players['Bob'].update_primal(congestion_dict ,step_size=0.01)
-    players['Charlie'].update_primal(congestion_dict ,step_size=0.01)
-    players['Alice'].update_dual(congestion_dict, step_size=0.2)
-    players['Bob'].update_dual(congestion_dict, step_size=0.2)
-    players['Charlie'].update_dual(congestion_dict, step_size=0.2)
+    for player in players.values():
+        player.update_primal(expected_congestion_dict, step_size=0.001)
+
+    for player in players.values():
+        player.update_dual(expected_congestion_dict, step_size=10)
 
     
-    """
-    # play_game(G, players)
-    """
     alice_str_over_time.append(players['Alice'].strategy)
     bob_str_over_time.append(players['Bob'].strategy)
     charlie_str_over_time.append(players['Charlie'].strategy)
@@ -115,14 +110,25 @@ for i in range(NUM_ITERATIONS):
     plt_wass_Bob.append(players['Bob'].wasser)
     plt_wass_Charlie.append(players['Charlie'].wasser)
 
+    bob_lambda_over_time.append(list(players['Bob'].mu))
+    bob_highway_over_time.append(players['Bob'].strategy[-1])
+
+players['Alice'].choose_action()
+players['Bob'].choose_action()
+players['Charlie'].choose_action()
+
 print(alice_str_over_time[-1])
 print(bob_str_over_time[-1])
 print(charlie_str_over_time[-1])
 
+print('Saving gifs: Alice')
 save_animation(alice_str_over_time,'Alice')
+print('Saving gifs: Bob')
 save_animation(bob_str_over_time,'Bob')
+print('Saving gifs: Charlie')
 save_animation(charlie_str_over_time,'Charlie')
 
+print('Plotting')
 plt.plot(plt_kl_Alice)
 plt.plot(plt_kl_Bob)
 plt.plot(plt_kl_Charlie)
@@ -133,6 +139,17 @@ plt.plot(plt_wass_Alice)
 plt.plot(plt_wass_Bob)
 plt.plot(plt_wass_Charlie)
 plt.savefig('probs_wasser.jpg')
+plt.close()
+
+
+
+ax1 = plt.subplot()
+l1 = ax1.plot(bob_lambda_over_time, color='blue')
+ax2 = ax1.twinx()
+l2 = ax2.plot(bob_highway_over_time, color='magenta')
+ax1.add_artist(ax1.legend(l1, 'lambda'))
+ax2.add_artist(ax2.legend(l2, 'prob_highway'))
+plt.savefig('bob_lambda.jpg')
 plt.close()
 
 for player in players.values():

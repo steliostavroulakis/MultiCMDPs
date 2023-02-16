@@ -1,0 +1,77 @@
+1:
+
+This graph is Bob's lambda over time graph.
+
+After 500 iterations, the strategies looked like this:
+[0. 0. 0. 0. 1.]
+[0.         0.00521487 0.00521487 0.98957025 0.        ]
+[0.15812625 0.         0.         0.         0.84187375]
+
+You can see that Bob is underutilizing his gas. 
+The cycles of lambda are really bad here. When the slope of the lambda graph is very positive, Bob is using
+more gas than he should be, so the dual updates are punishing him. Here, however, we ended at a point when
+the dual graph was about as negative as it gets, and we can see that that means lambda is rapidly loosening.
+
+Step sizes here are 0.1 for primal and 0.1 for dual. So not good results, but really good demonstration of
+the dynamic between the primal and dual variables, and good demonstration of what happens when you knock
+over the delicate balance. Pretty cool!
+
+Parameters for future reference:
+step sizes are 0.1 for primal and 0.1 for dual
+Alice gas is 16, Bob gas 5, Charlie gas 8
+highway has 1/10 congestion, 2 times the gas
+
+
+
+
+2:
+
+This graph is also Bob's lambda over time graph.
+
+Parameters: step sizes are 0.1 for both primal and dual, 520 iterations.
+
+After 520 iterations, the strategies looked like this:
+[0. 0. 0. 0. 1.]
+[0.         0.54549013 0.         0.         0.45450987]
+[0.        0.        0.9694857 0.        0.0305143]2:
+
+Here, we ended the simulation while the lambda graph is very positive, and as predicted, Bob is using
+way more gas than he should: in expectation, Bob's strategy uses 8 gas, way more than his allowed 5.
+
+
+
+3:
+
+Same as 1 and 2, but with different parameters. The only thing I changed here was step size.
+0.1 for primal and 0.01 for dual. We see fluctuation in mu that is less sinusoidal, but I still don't
+like it, because the fluctuations are really wide, tens of iterations long. This means that the primal
+has a lot of time to react and vary wildly, straying really far from the boundary of the dark regions.
+Reminder that our goal here is to straddle the boundary of the dark regions.
+
+I bet the cycles would be shorter if I actuall did the opposite and dramatically increased the dual step
+size.
+
+Here's the strategies after finishing:
+
+[0. 0. 0. 0. 1.]
+[0.25 0.25 0.25 0.25 0.  ]
+[0.04515509 0.04515509 0.04515509 0.04515509 0.81937966]
+
+
+
+4:
+
+Same parameters as last time, but this time I decided to graph Bob's probability of taking the highway
+and lambda over the same graph. You can really see how one responds to the other!
+
+
+
+
+5:
+
+This one is great. I changed the parameters again. Step sizes are now 0.01 in primal and 10 in dual.
+The huge dual steps really punish any straying from the boundary, and the small primal steps mean that
+any straying from the boundary is minimal. This is shown in the graph. The sinusoidal pattern is still
+there, but by adjusting step sizes, we can make the jumps very small.
+
+The labels are bad, blame Python for that one. Purple is highway probability, and blue is lambda.
