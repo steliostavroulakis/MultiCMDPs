@@ -17,6 +17,8 @@ from lib import print_dag
 from lib import Player
 #from lib import dual_update
 from lib import save_animation
+from lib import save_bar_chart
+from lib import save_line_chart
 import argparse
 plt.style.use('ggplot')
 
@@ -86,69 +88,14 @@ for knob in knobs:
             plt_kl[name].append(players[name].kldiv)
             plt_wass[name].append(players[name].wasser)
 
-    #fig, axs = plt.subplots(1, 3, figsize=(12,5))
-    fig, axs = plt.subplots(1, len(player_names), figsize=(3*len(player_names) + 3, 5))
-
+    # print strategy chart
     bars = ['P1', 'P2', 'P3', 'P4', 'HW']
-    y_pos = np.arange(len(bars))
-
-    for i, name in enumerate(player_names):
-        axs[i].bar(range(len(players[name].strategy)), str_over_time[name][-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
-        axs[i].set_title(name)
-        axs[i].set_xlabel('Action')
-        axs[i].set_ylim([0, 1])
-    axs[0].set_ylabel('Probability') # set y label only for the left most axis
-
-    for ax in axs:
-        ax.axhline(y=0.25, color='gray', linestyle='--')
-
-    #plt.ylim([0, 1])
-
-    plt.setp(axs, xticks=y_pos, xticklabels=bars)
-    plt.subplots_adjust(left=0.1, right=0.9, bottom = 0.2)
-    fig.text(0.5, 0.05, f'Total gas constraint: {knob}', ha='center', fontsize='14')
-    plt.savefig(pic_folder + 'experiment_result_{}.png'.format(total_gas_bound))
-    plt.close()
-
-
-
-    # Print line chart
-    avg_str_over_time = np.zeros(str_over_time['Alice'].shape)
-    for i, name in enumerate(player_names):
-        avg_str_over_time += str_over_time[name]
-    avg_str_over_time /= len(player_names)
-
-    n_fig = len(player_names) + 1 # players and average
-    fig, axs = plt.subplots(1, n_fig, figsize=(3 * n_fig + 3, 5))
-
-    bars = ['P1', 'P2', 'P3', 'P4', 'HW']
-    y_pos = np.arange(len(bars))
-
-    for i, name in enumerate(player_names):
-        for j, path in enumerate(players[name].paths):
-            axs[i].plot(range(iterates), str_over_time[name][:, j])
-        axs[i].legend(bars)
-        axs[i].set_title(name)
-        axs[i].set_xlabel('Iteration')
-        axs[i].set_ylim([0, 1])
-        axs[i].axhline(y=0.25, color='gray', linestyle='--')
-    axs[0].set_ylabel('Probability') # set y label only for the left most axis
-
-    # For avg
-    for j, path in enumerate(players[name].paths):
-        axs[-1].plot(range(iterates), avg_str_over_time[:, j])
-    axs[-1].legend(bars)
-    axs[-1].set_title('Average')
-    axs[-1].set_xlabel('Iteration')
-    axs[-1].set_ylabel('Probability')
-    axs[-1].set_ylim([0, 1])
-    axs[-1].axhline(y=0.25, color='gray', linestyle='--')
-
-    plt.subplots_adjust(left=0.1, right=0.9, bottom = 0.2)
-    fig.text(0.5, 0.05, f'Total gas constraint: {knob}', ha='center', fontsize='14')
-    plt.savefig(pic_folder + 'experiment_trend_{}_step_{}_dual_{}.png'.format(total_gas_bound, step_size, dual_step_size))
-    plt.close()
-    # Print line chart end
+    color = ['navy', 'navy', 'navy', 'navy', 'purple']
+    save_bar_chart(str_over_time, player_names, bars, color, pic_folder
+                        + 'experiment_result_{}.png'.format(total_gas_bound),
+                   f'Total gas constraint: {knob}')
+    save_line_chart(str_over_time, player_names, bars, True,
+                    pic_folder + 'experiment_trend_{}_step_{}_dual_{}.png'.format(total_gas_bound, step_size, dual_step_size), f'Total gas constraint: {knob}')
 
     #save_animation(alice_str_over_time,'Alice')
     #save_animation(bob_str_over_time,'Bob')

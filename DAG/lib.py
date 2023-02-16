@@ -29,6 +29,102 @@ def single_expected_load(G, strategy, paths):
             expected_loads[edge] += prob
     return expected_loads
 
+def save_bar_chart(str_over_time, player_names, bars, color=[],
+                    fig_path='./barchart.png', fig_title='Bar chart'):
+    """Print line chart prob vs iterate
+
+    Print line chart for given player_names.
+
+    Attributes:
+        str_over_time: {name: np.array.shape(num iterate, num path),..}
+        player_names: List[name], the player that needs to be printed
+        bars: List[str], path names
+        fig_path: string, where the line chart would be saved
+        fig_title: string, printed in figure
+    """
+    if not player_names:  # no player to print
+        return
+
+    n_fig = len(player_names)
+
+    str_over_time_shape = str_over_time[player_names[0]].shape  # (num iterate, num path)
+
+    fig, axs = plt.subplots(1, n_fig, figsize=(3*n_fig + 3, 5))
+
+    for i, name in enumerate(player_names):
+        if color:
+            axs[i].bar(range(str_over_time_shape[1]), str_over_time[name][-1], color=color)
+        else:
+            axs[i].bar(range(str_over_time_shape[1]), str_over_time[name][-1])
+        axs[i].set_title(name)
+        axs[i].set_xlabel('Action')
+        axs[i].set_ylim([0, 1])
+    axs[0].set_ylabel('Probability') # set y label only for the left most axis
+
+    for ax in axs:
+        ax.axhline(y=0.25, color='gray', linestyle='--')
+
+    plt.setp(axs, xticks=np.arange(len(bars)), xticklabels=bars)
+    plt.subplots_adjust(left=0.1, right=0.9, bottom = 0.2)
+    fig.text(0.5, 0.05, fig_title, ha='center', fontsize='14')
+    plt.savefig(fig_path)
+    plt.close()
+
+def save_line_chart(str_over_time, player_names, bars, show_avg=True, 
+                    fig_path='./linechart.png', fig_title='Line chart'):
+    """Print line chart prob vs iterate
+
+    Print line chart for given player_names.
+
+    Attributes:
+        str_over_time: {name: np.array.shape(num iterate, num path),..}
+        player_names: List[name], the player that needs to be printed
+        bars: List[str], path names
+        show_avg: bool, calculate average strategy and print it
+        fig_path: string, where the line chart would be saved
+        fig_title: string, printed in figure
+    """
+    if not player_names:  # no player to print
+        return
+
+    n_fig = len(player_names)
+    # (num iterate, num path)
+    str_over_time_shape = str_over_time[player_names[0]].shape
+    if show_avg:
+        n_fig += 1
+        avg_str_over_time = np.zeros(str_over_time_shape)
+        for i, name in enumerate(player_names):
+            avg_str_over_time += str_over_time[name]
+        avg_str_over_time /= len(player_names)
+
+    fig, axs = plt.subplots(1, n_fig, figsize=(3 * n_fig + 3, 5))
+
+    # print line chart for each player
+    for i, name in enumerate(player_names):
+        #for j, path in enumerate(players[name].paths):
+        for j, _ in enumerate(bars):
+            axs[i].plot(range(str_over_time_shape[0]), str_over_time[name][:, j])
+        axs[i].legend(bars)
+        axs[i].set_title(name)
+        axs[i].set_xlabel('Iteration')
+        axs[i].set_ylim([0, 1])
+        axs[i].axhline(y=0.25, color='gray', linestyle='--')
+    axs[0].set_ylabel('Probability') # set y label only for the left most axis
+
+    if show_avg:
+        for j, _ in enumerate(bars):
+            axs[-1].plot(range(str_over_time_shape[0]), avg_str_over_time[:, j])
+        axs[-1].legend(bars)
+        axs[-1].set_title('Average')
+        axs[-1].set_xlabel('Iteration')
+        axs[-1].set_ylim([0, 1])
+        axs[-1].axhline(y=0.25, color='gray', linestyle='--')
+
+    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.2)
+    fig.text(0.5, 0.05, fig_title, ha='center', fontsize='14')
+    plt.savefig(fig_path)
+    plt.close()
+
 def save_animation(str_over_time, name):
 
     indices = [i for i in range(len(str_over_time[0]))]
