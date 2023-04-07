@@ -26,12 +26,16 @@ knobs = np.round(log_space).astype(int)
 #print(lst)
 #sys.exit(0)
 
+player_names = ['Alice', 'Bob', 'Charlie']
+
 for knob in knobs:
 
     players = dict()
-    players['Alice'] = Player('Alice',G)
-    players['Bob'] = Player('Bob',G)
-    players['Charlie'] = Player('Charlie',G)
+    for player_name in player_names:
+        players[player_name] = Player(player_name, G)
+    # players['Alice'] = Player('Alice',G)
+    # players['Bob'] = Player('Bob',G)
+    # players['Charlie'] = Player('Charlie',G)
 
     #print(players['Charlie'].strategy)
 
@@ -58,9 +62,9 @@ for knob in knobs:
         
         gradient_descent_ascent(G,players, lamda, total_gas_bound)
 
-        alice_str_over_time.append(players['Alice'].strategy)
-        bob_str_over_time.append(players['Bob'].strategy)
-        charlie_str_over_time.append(players['Charlie'].strategy)
+        # alice_str_over_time.append(players['Alice'].strategy)
+        # bob_str_over_time.append(players['Bob'].strategy)
+        # charlie_str_over_time.append(players['Charlie'].strategy)
 
         # Tracking differences between distributions
         # plt_kl_Alice.append(players['Alice'].kldiv)
@@ -76,23 +80,28 @@ for knob in knobs:
     bars = ['P1', 'P2', 'P3', 'P4', 'HW']
     y_pos = np.arange(len(bars))
 
-    axs[0].bar(range(len(alice_str_over_time[-1])), alice_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
-    axs[0].set_title('Alice')
-    axs[0].set_xlabel('Action')
+    for i, player_name in enumerate(player_names):
+        players[player_name].plot_history_at('strategy', -1, axs[i], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+        axs[i].set_xlabel('Action')
     axs[0].set_ylabel('Probability')
-    axs[0].set_ylim([0, 1])
 
-
-    axs[1].bar(range(len(bob_str_over_time[-1])), bob_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
-    axs[1].set_title('Bob')
-    axs[1].set_xlabel('Action')
-    axs[1].set_ylim([0, 1])
-
-
-    axs[2].bar(range(len(charlie_str_over_time[-1])), charlie_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
-    axs[2].set_title('Charlie')
-    axs[2].set_xlabel('Action')
-    axs[2].set_ylim([0, 1])
+    # axs[0].bar(range(len(alice_str_over_time[-1])), alice_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    # axs[0].set_title('Alice')
+    # axs[0].set_xlabel('Action')
+    # axs[0].set_ylabel('Probability')
+    # axs[0].set_ylim([0, 1])
+    #
+    #
+    # axs[1].bar(range(len(bob_str_over_time[-1])), bob_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    # axs[1].set_title('Bob')
+    # axs[1].set_xlabel('Action')
+    # axs[1].set_ylim([0, 1])
+    #
+    #
+    # axs[2].bar(range(len(charlie_str_over_time[-1])), charlie_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    # axs[2].set_title('Charlie')
+    # axs[2].set_xlabel('Action')
+    # axs[2].set_ylim([0, 1])
 
     for ax in axs:
         ax.axhline(y=0.25, color='gray', linestyle='--')

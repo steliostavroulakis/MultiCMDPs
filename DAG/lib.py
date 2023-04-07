@@ -182,7 +182,10 @@ def gradient_descent_ascent(G,players, lamda, total_gas_bound):
         player.strategy = projsplx(player.strategy - step_size * all_grads[idx])
         player.kldiv = sum(rel_entr(new_strategy, player.strategy))
         player.wasser = wasserstein_distance(new_strategy, player.strategy)
-        
+        player.history['strategy'].append(player.strategy)
+        player.history['kldiv'].append(player.kldiv)
+        player.history['wasser'].append(player.wasser)
+
     # Update multiplier
     dual_step_size = 0.01
     lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
@@ -207,6 +210,17 @@ class Player:
         sum_strategy = sum(self.strategy)
         self.strategy = np.array([x / sum_strategy for x in self.strategy])
         #self.strategy = [0,0,0,0,1]
+
+        self.history = {}
+        self.history['strategy'] = []
+        self.history['kldiv'] = []
+        self.history['wasser'] = []
+
+    def plot_history_at(self, history_name, history_time, axis, color):
+        history_to_plot = self.history[history_name][history_time]
+        axis.bar(range(len(history_to_plot)), history_to_plot, color=color)
+        axis.set_title(self.name)
+        axis.set_ylim([0, 1])
 
     def primal_gradient(self,exp_visitation, lamda):
 
