@@ -157,14 +157,14 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def gradient_descent_ascent(G,players, lamda, total_gas_bound):
+def gradient_descent_ascent(G,players, lamda, gas_bound):
 
     total_cong_dict = total_expected_load(G,players)
 
     all_grads = []
 
     for _,player in players.items():
-        all_grads.append(player.primal_gradient(total_cong_dict,lamda))
+        all_grads.append(player.primal_gradient(total_cong_dict))
 
     # Calculate total gas consumption
     gas_dict = total_gas_dict(total_cong_dict)
@@ -172,7 +172,13 @@ def gradient_descent_ascent(G,players, lamda, total_gas_bound):
     for gas in gas_dict.values():
         total_gas += gas
 
-    violation = total_gas - total_gas_bound
+    violation = total_gas - gas_bound
+
+    # calculate the expected gas cost for each user
+    gas_violations = {}
+    for name, player in players.items():
+        gas = sum(total_gas_dict(total_expected_load(player.G, {player.name: player})).values())
+        gas_violations[name] = gas - player.constrain
 
     # Update Primal and Dual Variables
     step_size = 0.00005
@@ -188,11 +194,13 @@ def gradient_descent_ascent(G,players, lamda, total_gas_bound):
 
     # Update multiplier
     dual_step_size = 0.01
-    lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
+    # lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
+    for name, player in players.items():
+        player.lamda = np.clip(player.lamda + dual_step_size*gas_violations[name], 0, 1000)
 
 class Player:
 
-    def __init__(self, name, G):
+    def __init__(self, name, G, constrain):
 
         # Save the graph inside the player class for each player to know the graph they are dealing with
         self.name = name
@@ -211,6 +219,9 @@ class Player:
         self.strategy = np.array([x / sum_strategy for x in self.strategy])
         #self.strategy = [0,0,0,0,1]
 
+        self.constrain = constrain
+        self.lamda = 0
+
         self.history = {}
         self.history['strategy'] = []
         self.history['kldiv'] = []
@@ -222,7 +233,7 @@ class Player:
         axis.set_title(self.name)
         axis.set_ylim([0, 1])
 
-    def primal_gradient(self,exp_visitation, lamda):
+    def primal_gradient(self,exp_visitation):
 
         self_visitation = single_expected_load(self.G, self.strategy, self.paths)
         complement_dict = {key: exp_visitation[key] - self_visitation[key] for key in exp_visitation.keys()}
@@ -254,7 +265,13 @@ class Player:
         
         constr_gradient = np.array(constr_gradient)
 
-        return np.array(primal_gradient + lamda[0]*constr_gradient)
+        return np.array(primal_gradient + self.lamda*constr_gradient)
+
+    # def dual_update(self, dual_step_size):
+    #     gas = sum(total_gas_dict(total_expected_load(self.G, {self.name: self})).values())
+    #     violation = gas - self.constrain
+    #     self.lamda = np.clip(self.lamda + dual_step_size*violation, 0, 1000)
+
 
     # Takes a step of gradient descent
     # congestion_dict is a dict from edges to numbers

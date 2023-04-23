@@ -23,16 +23,18 @@ G = create_dag()
 
 log_space = np.logspace(np.log10(8), np.log10(100), 25)
 knobs = np.round(log_space).astype(int)
+knobs=[1]
 #print(lst)
 #sys.exit(0)
 
 player_names = ['Alice', 'Bob', 'Charlie']
+player_constrains = [5, 14, 15]
 
 for knob in knobs:
 
     players = dict()
-    for player_name in player_names:
-        players[player_name] = Player(player_name, G)
+    for i, player_name in enumerate(player_names):
+        players[player_name] = Player(player_name, G, player_constrains[i])
     # players['Alice'] = Player('Alice',G)
     # players['Bob'] = Player('Bob',G)
     # players['Charlie'] = Player('Charlie',G)
