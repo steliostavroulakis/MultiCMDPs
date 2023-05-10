@@ -28,13 +28,15 @@ knobs=[1]
 #sys.exit(0)
 
 player_names = ['Alice', 'Bob', 'Charlie']
-player_constrains = [5, 14, 15]
+player_constrains = [6, 6, 14]
+player_max_lambdas = [10, 10, 10]
+use_max_lambda = False
 
 for knob in knobs:
 
     players = dict()
     for i, player_name in enumerate(player_names):
-        players[player_name] = Player(player_name, G, player_constrains[i])
+        players[player_name] = Player(player_name, G, player_constrains[i], player_max_lambdas[i])
     # players['Alice'] = Player('Alice',G)
     # players['Bob'] = Player('Bob',G)
     # players['Charlie'] = Player('Charlie',G)
@@ -62,7 +64,7 @@ for knob in knobs:
     for i in range(iterates):
         print(f"Starting Iteration {i}/{iterates}")
         
-        gradient_descent_ascent(G,players, lamda, total_gas_bound)
+        gradient_descent_ascent(G,players, lamda, total_gas_bound, use_max_lambda=use_max_lambda)
 
         # alice_str_over_time.append(players['Alice'].strategy)
         # bob_str_over_time.append(players['Bob'].strategy)

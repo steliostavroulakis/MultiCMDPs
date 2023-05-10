@@ -157,7 +157,7 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def gradient_descent_ascent(G,players, lamda, gas_bound):
+def gradient_descent_ascent(G,players, lamda, gas_bound, use_max_lambda=False):
 
     total_cong_dict = total_expected_load(G,players)
 
@@ -178,6 +178,7 @@ def gradient_descent_ascent(G,players, lamda, gas_bound):
     gas_violations = {}
     for name, player in players.items():
         gas = sum(total_gas_dict(total_expected_load(player.G, {player.name: player})).values())
+        player.history['gas'].append(gas)
         gas_violations[name] = gas - player.constrain
 
     # Update Primal and Dual Variables
@@ -196,11 +197,16 @@ def gradient_descent_ascent(G,players, lamda, gas_bound):
     dual_step_size = 0.01
     # lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
     for name, player in players.items():
-        player.lamda = np.clip(player.lamda + dual_step_size*gas_violations[name], 0, 1000)
+        if use_max_lambda:
+            lamda = player.lamda + dual_step_size*gas_violations[name]
+            player.lamda = player.max_lambda if lamda > 0 else 0
+        else:
+            player.lamda = np.clip(player.lamda + dual_step_size*gas_violations[name], 0, 1000)
+        player.history['lamda'].append(player.lamda)
 
 class Player:
 
-    def __init__(self, name, G, constrain):
+    def __init__(self, name, G, constrain, max_lambda=1000):
 
         # Save the graph inside the player class for each player to know the graph they are dealing with
         self.name = name
@@ -221,11 +227,14 @@ class Player:
 
         self.constrain = constrain
         self.lamda = 0
+        self.max_lambda = max_lambda
 
         self.history = {}
         self.history['strategy'] = []
         self.history['kldiv'] = []
         self.history['wasser'] = []
+        self.history['gas'] = []
+        self.history['lamda'] = []
 
     def plot_history_at(self, history_name, history_time, axis, color):
         history_to_plot = self.history[history_name][history_time]
