@@ -37,7 +37,7 @@ dual_step = 0.1
 
 
 def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =1000,
-              use_max_lambda=False, primal_step=0.005, dual_step=0.1, pic_name="", pic_folder="."):
+              use_max_lambda=False, primal_step=0.005, dual_step=0.1):
     # init players
     players = dict()
     for i, player_name in enumerate(player_names):
@@ -51,6 +51,13 @@ def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =
 
         new_gradient_descent_ascent(G, players, use_max_lambda=use_max_lambda,
                                     primal_step=primal_step, dual_step=dual_step)
+    return players
+
+
+def plot_players_history(players, pic_name=""):
+    total_gas_bound = 0
+    for player in players.values():
+        total_gas_bound += player.constrain
 
     # plot - final strategy
     fig, axs = plt.subplots(1, 3, figsize=(12, 5))

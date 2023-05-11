@@ -1,12 +1,12 @@
-from dag_train import train_dag
+from dag_train import train_dag, plot_players_history
 from lib import create_dag
 import unittest
 
 
 class DAGExperiments(unittest.TestCase):
-    G = create_dag()
+    def test_experiment_0(self):
+        G = create_dag()
 
-    def experiment_0(self):
         player_names = ['Alice', 'Bob', 'Charlie']
         player_constrains = [6, 6, 14]
         player_max_lambdas = [10, 10, 10]
@@ -16,7 +16,9 @@ class DAGExperiments(unittest.TestCase):
         primal_step = 0.005
         dual_step = 0.1
 
-        train_dag(player_names=player_names, G=G, player_constrains=player_constrains,
-                  player_max_lambdas=player_max_lambdas,iterates=iterates, use_max_lambda=use_max_lambda,
-                  gitprimal_step=primal_step, dual_step=dual_step,
-                  pic_name="test")
+        players = train_dag(player_names=player_names, G=G, player_constrains=player_constrains,
+                            player_max_lambdas=player_max_lambdas, iterates=iterates, use_max_lambda=use_max_lambda,
+                            primal_step=primal_step, dual_step=dual_step)
+
+        plot_players_history(players, pic_name="test")
+        self.assertEqual(1, 1)
