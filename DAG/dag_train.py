@@ -11,7 +11,7 @@ import pprint
 import sys
 
 from lib import create_dag
-from lib import gradient_descent_ascent
+from lib import gradient_descent_ascent, new_gradient_descent_ascent
 from lib import print_dag
 from lib import Player
 #from lib import dual_update
@@ -34,6 +34,47 @@ use_max_lambda = False
 
 primal_step = 0.005
 dual_step = 0.1
+
+
+def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =1000,
+              use_max_lambda=False, primal_step=0.005, dual_step=0.1, pic_name="", pic_folder="."):
+    # init players
+    players = dict()
+    for i, player_name in enumerate(player_names):
+        players[player_name] = Player(player_name, G, player_constrains[i], player_max_lambdas[i])
+    total_gas_bound = sum(player_constrains)
+
+    # train
+    for i in range(iterates):
+        if i % 100:  # todo: use package
+            print(f"Starting Iteration {i}/{iterates}")
+
+        new_gradient_descent_ascent(G, players, use_max_lambda=use_max_lambda,
+                                    primal_step=primal_step, dual_step=dual_step)
+
+    # plot - final strategy
+    fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+
+    bars = ['P1', 'P2', 'P3', 'P4', 'HW']
+    y_pos = np.arange(len(bars))
+
+    for i, player_name in enumerate(player_names):
+        players[player_name].plot_history_at('strategy', -1, axs[i], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+        axs[i].set_xlabel('Action')
+    axs[0].set_ylabel('Probability')
+
+    for ax in axs:
+        ax.axhline(y=0.25, color='gray', linestyle='--')
+
+    plt.setp(axs, xticks=y_pos, xticklabels=bars)
+    plt.subplots_adjust(left=0.1, right=0.9, bottom=0.2)
+    fig.text(0.5, 0.05, f'Total gas constraint: {total_gas_bound}', ha='center', fontsize='14')
+    if pic_name:
+        plt.savefig(pic_name + "_final_strategy.png")
+    else:
+        plt.savefig('experiment_result_{}.png'.format(total_gas_bound))
+    plt.close()
+
 
 if __name__ == "__main__":
     for knob in knobs:
