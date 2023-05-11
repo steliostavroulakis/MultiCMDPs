@@ -32,6 +32,9 @@ player_constrains = [6, 6, 14]
 player_max_lambdas = [10, 10, 10]
 use_max_lambda = False
 
+primal_step = 0.005
+dual_step = 0.1
+
 for knob in knobs:
 
     players = dict()
@@ -64,7 +67,8 @@ for knob in knobs:
     for i in range(iterates):
         print(f"Starting Iteration {i}/{iterates}")
         
-        gradient_descent_ascent(G,players, lamda, total_gas_bound, use_max_lambda=use_max_lambda)
+        gradient_descent_ascent(G,players, lamda, total_gas_bound, use_max_lambda=use_max_lambda,
+                                primal_step=primal_step, dual_step=dual_step)
 
         # alice_str_over_time.append(players['Alice'].strategy)
         # bob_str_over_time.append(players['Bob'].strategy)

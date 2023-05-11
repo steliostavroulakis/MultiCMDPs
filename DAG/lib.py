@@ -157,7 +157,7 @@ def print_dag(G):
     nx.draw(G, pos, with_labels=True, node_color='orange', edge_color='blue', node_size=500)#, edgelist=weights.keys(), width=[w for w in weights.values()])
     plt.savefig("base_graph.png")
 
-def gradient_descent_ascent(G,players, lamda, gas_bound, use_max_lambda=False):
+def gradient_descent_ascent(G,players, lamda, gas_bound, use_max_lambda=False, primal_step=0.005, dual_step=0.1):
 
     total_cong_dict = total_expected_load(G,players)
 
@@ -182,11 +182,11 @@ def gradient_descent_ascent(G,players, lamda, gas_bound, use_max_lambda=False):
         gas_violations[name] = gas - player.constrain
 
     # Update Primal and Dual Variables
-    step_size = 0.00005
+    # step_size = 0.00005
     for idx,(_,player) in enumerate(players.items()):
 
         new_strategy = player.strategy
-        player.strategy = projsplx(player.strategy - step_size * all_grads[idx])
+        player.strategy = projsplx(player.strategy - primal_step * all_grads[idx])
         player.kldiv = sum(rel_entr(new_strategy, player.strategy))
         player.wasser = wasserstein_distance(new_strategy, player.strategy)
         player.history['strategy'].append(player.strategy)
@@ -194,14 +194,14 @@ def gradient_descent_ascent(G,players, lamda, gas_bound, use_max_lambda=False):
         player.history['wasser'].append(player.wasser)
 
     # Update multiplier
-    dual_step_size = 0.01
-    # lamda[0] = np.clip(lamda[0] + dual_step_size*violation,0,1000)
+    # dual_step_size = 0.01
+    # lamda[0] = np.clip(lamda[0] + dual_step*violation,0,1000)
     for name, player in players.items():
         if use_max_lambda:
-            lamda = player.lamda + dual_step_size*gas_violations[name]
+            lamda = player.lamda + dual_step*gas_violations[name]
             player.lamda = player.max_lambda if lamda > 0 else 0
         else:
-            player.lamda = np.clip(player.lamda + dual_step_size*gas_violations[name], 0, 1000)
+            player.lamda = np.clip(player.lamda + dual_step*gas_violations[name], 0, 1000)
         player.history['lamda'].append(player.lamda)
 
 class Player:
