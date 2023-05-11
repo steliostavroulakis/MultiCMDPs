@@ -17,5 +17,6 @@ class DAGExperiments(unittest.TestCase):
         dual_step = 0.1
 
         train_dag(player_names=player_names, G=G, player_constrains=player_constrains,
-                  player_max_lambdas=player_max_lambdas,iterates=iterates, primal_step=primal_step, dual_step=dual_step,
+                  player_max_lambdas=player_max_lambdas,iterates=iterates, use_max_lambda=use_max_lambda,
+                  gitprimal_step=primal_step, dual_step=dual_step,
                   pic_name="test")
