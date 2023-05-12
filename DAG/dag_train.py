@@ -54,7 +54,7 @@ def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =
     return players
 
 
-def plot_players_history_bar_chart(players, history_name="strategy", frame=-1, pic_name=""):
+def plot_players_history_bar_chart(players, history_name="strategy", frame=-1, pic_name="plot"):
     total_gas_bound = 0
     for player in players.values():
         total_gas_bound += player.constrain
@@ -77,14 +77,11 @@ def plot_players_history_bar_chart(players, history_name="strategy", frame=-1, p
     plt.setp(axs, xticks=y_pos, xticklabels=bars)
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.2)
     fig.text(0.5, 0.05, f'Total gas constraint: {total_gas_bound}', ha='center', fontsize='14')
-    if pic_name:
-        plt.savefig(pic_name + "_final_strategy_bar.png")
-    else:
-        plt.savefig('experiment_result_bar_{}_{}.png'.format(total_gas_bound, history_name))
+    plt.savefig("{}_{}_bar_at_{}.png".format(pic_name, history_name, frame))
     plt.close()
 
 
-def plot_players_history_line_chart(players, history_name="strategy", start=0, end=None, pic_name=""):
+def plot_players_history_line_chart(players, history_name="strategy", start=0, end=None, pic_name="plot"):
     # plot - final strategy
     n_player = len(players)
     fig, axs = plt.subplots(1, n_player, figsize=(4 * n_player, 5))
@@ -93,10 +90,7 @@ def plot_players_history_line_chart(players, history_name="strategy", start=0, e
         axs[i].plot(players[player_name].history[history_name][start:end])
         axs[i].set_xlabel(player_name)
     axs[0].set_ylabel('Probability')
-    if pic_name:
-        plt.savefig(pic_name + "_strategy_line.png")
-    else:
-        plt.savefig('experiment_result_line_{}_{}.png'.format(total_gas_bound, history_name))
+    plt.savefig("{}_{}_line.png".format(pic_name, history_name))
     plt.close()
 
 
