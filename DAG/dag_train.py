@@ -46,7 +46,7 @@ def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =
 
     # train
     for i in range(iterates):
-        if i % 100:  # todo: use package
+        if not i % 100:  # todo: use package
             print(f"Starting Iteration {i}/{iterates}")
 
         new_gradient_descent_ascent(G, players, use_max_lambda=use_max_lambda,
@@ -54,19 +54,20 @@ def train_dag(player_names, G, player_constrains, player_max_lambdas, iterates =
     return players
 
 
-def plot_players_history(players, pic_name=""):
+def plot_players_history_bar_chart(players, history_name="strategy", frame=-1, pic_name=""):
     total_gas_bound = 0
     for player in players.values():
         total_gas_bound += player.constrain
 
     # plot - final strategy
-    fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+    n_player = len(players)
+    fig, axs = plt.subplots(1, n_player, figsize=(4*n_player, 5))
 
     bars = ['P1', 'P2', 'P3', 'P4', 'HW']
     y_pos = np.arange(len(bars))
 
-    for i, player_name in enumerate(player_names):
-        players[player_name].plot_history_at('strategy', -1, axs[i], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    for i, player_name in enumerate(players):
+        players[player_name].plot_history_at(history_name, frame, axs[i], color=['navy', 'navy', 'navy', 'navy', 'purple'])
         axs[i].set_xlabel('Action')
     axs[0].set_ylabel('Probability')
 
@@ -77,9 +78,25 @@ def plot_players_history(players, pic_name=""):
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.2)
     fig.text(0.5, 0.05, f'Total gas constraint: {total_gas_bound}', ha='center', fontsize='14')
     if pic_name:
-        plt.savefig(pic_name + "_final_strategy.png")
+        plt.savefig(pic_name + "_final_strategy_bar.png")
     else:
-        plt.savefig('experiment_result_{}.png'.format(total_gas_bound))
+        plt.savefig('experiment_result_bar_{}_{}.png'.format(total_gas_bound, history_name))
+    plt.close()
+
+
+def plot_players_history_line_chart(players, history_name="strategy", start=0, end=None, pic_name=""):
+    # plot - final strategy
+    n_player = len(players)
+    fig, axs = plt.subplots(1, n_player, figsize=(4 * n_player, 5))
+
+    for i, player_name in enumerate(players):
+        axs[i].plot(players[player_name].history[history_name][start:end])
+        axs[i].set_xlabel(player_name)
+    axs[0].set_ylabel('Probability')
+    if pic_name:
+        plt.savefig(pic_name + "_strategy_line.png")
+    else:
+        plt.savefig('experiment_result_line_{}_{}.png'.format(total_gas_bound, history_name))
     plt.close()
 
 
