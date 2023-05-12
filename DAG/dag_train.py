@@ -10,8 +10,8 @@ import math
 import pprint
 import sys
 
-from lib import create_dag
-from lib import gradient_descent_ascent
+from lib import create_dag, gradient_descent
+from lib import update_lambda
 from lib import print_dag
 from lib import Player
 #from lib import dual_update
@@ -23,6 +23,7 @@ G = create_dag()
 
 log_space = np.logspace(np.log10(8), np.log10(100), 25)
 knobs = np.round(log_space).astype(int)
+#knobs = [8]
 #print(lst)
 #sys.exit(0)
 
@@ -49,13 +50,15 @@ for knob in knobs:
     bob_str_over_time = []
     charlie_str_over_time = []
 
-    iterates = 15000
+    iterates = 150
     lamda = [0]
     total_gas_bound = knob
 
     for i in range(iterates):
         print(f"Starting Iteration {i}/{iterates}")
         
+        update_lambda(players)
+        gradient_descent(players)
         gradient_descent_ascent(G,players, lamda, total_gas_bound)
 
         alice_str_over_time.append(players['Alice'].strategy)
@@ -76,20 +79,20 @@ for knob in knobs:
     bars = ['P1', 'P2', 'P3', 'P4', 'HW']
     y_pos = np.arange(len(bars))
 
-    axs[0].bar(range(len(alice_str_over_time[-1])), alice_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    axs[0].bar(range(len(alice_str_over_time[-1])), alice_str_over_time[-1], color=['#000000', '#000000', '#000000', '#000000', '#b2050f'])
     axs[0].set_title('Alice')
     axs[0].set_xlabel('Action')
     axs[0].set_ylabel('Probability')
     axs[0].set_ylim([0, 1])
 
 
-    axs[1].bar(range(len(bob_str_over_time[-1])), bob_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    axs[1].bar(range(len(bob_str_over_time[-1])), bob_str_over_time[-1], color=['#000000', '#000000', '#000000', '#000000', '#b2050f'])
     axs[1].set_title('Bob')
     axs[1].set_xlabel('Action')
     axs[1].set_ylim([0, 1])
 
 
-    axs[2].bar(range(len(charlie_str_over_time[-1])), charlie_str_over_time[-1], color=['navy', 'navy', 'navy', 'navy', 'purple'])
+    axs[2].bar(range(len(charlie_str_over_time[-1])), charlie_str_over_time[-1], color=['#000000', '#000000', '#000000', '#000000', '#b2050f'])
     axs[2].set_title('Charlie')
     axs[2].set_xlabel('Action')
     axs[2].set_ylim([0, 1])
