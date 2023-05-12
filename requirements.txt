@@ -19,10 +19,12 @@ decorator==5.1.1
 defusedxml==0.7.1
 entrypoints==0.4
 executing==1.2.0
+Faker==18.7.0
 fastjsonschema==2.16.2
 fonttools==4.38.0
 fqdn==1.5.1
 idna==3.4
+imageio==2.28.1
 ipykernel==6.19.4
 ipython==8.8.0
 ipython-genutils==0.2.0
