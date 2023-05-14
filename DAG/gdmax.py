@@ -51,12 +51,8 @@ if not os.path.exists('frames'):
 
 for t in range(t_iterates):
 
-    players_copy = copy.deepcopy(players)
-    sum_gaps = 0
-    nash_gap_dict = calculate_nash_gap(G, players_copy)
-    for elems in nash_gap_dict.values():
-        sum_gaps += elems
-    gaps.append(sum_gaps)
+    print(calculate_nash_gap(G, players))
+    gaps.append(calculate_nash_gap(G, players))
 
     print(f"Starting Iteration {t+1}/{t_iterates}")
 
@@ -67,8 +63,6 @@ for t in range(t_iterates):
 
     # Run a gradient descent step on Psi
     gradient_descent(G, players, x_stepsize)
-
-    print(calculate_nash_gap(G, players))
 
     # Include this part after policy update:
     # After each gradient descent step, plot the strategy of each player

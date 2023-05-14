@@ -134,7 +134,10 @@ def update_lambda(players, step_size):
 
         # Gradient ascent on lambda
 
-        player.l = max(0,player.l + step_size * constraint_function)
+        """ these two are from the merge conflict"""
+        # player.l = max(0,player.l + step_size * constraint_function)
+        player.l = max(0,player.l + step_size * constraint_function - 2*0.0001*player.l)
+
         #print(f"{player.name}'s lambda = ", player.l)
 
 def calculate_nash_gap(G, players):
@@ -147,14 +150,16 @@ def calculate_nash_gap(G, players):
 def player_nash_gap(G, player, exp_visitation):
     self_load = single_expected_load(player.G, player.strategy, player.paths)
     rest_load = {key: exp_visitation[key] - self_load[key] for key in exp_visitation.keys()}
-     
+
+    hypothetical_dict = total_effective_congestion({edge : load + 1 for edge, load in rest_load.items()})
+
     # pure_strategy_cost is a vector containing [f(x_1), f(x_2), ..., f(x_5)]
     # each entry is the cost for pure strategy i
     pure_strategy_cost = [None for _ in player.paths]
     for i in range(len(player.paths)):
         cost = 0
         for edge in player.to_edge_list(player.paths[i]):
-            cost += 1 + rest_load[edge]
+            cost += hypothetical_dict[edge]
         pure_strategy_cost[i] = cost
 
     # same but for gas
@@ -178,8 +183,16 @@ def player_nash_gap(G, player, exp_visitation):
         print('linear program was non-feasible somehow? exiting')
         sys.exit(-1)
 
-    return opt.fun
-        player.l = max(0,player.l + step_size * constraint_function - 2*0.0001*player.l)
+    # now calculate the actual congestion experienced by this player
+    actual_congestion = 0
+    effective_congestion_dict = total_effective_congestion(exp_visitation)
+    for i in range(len(player.paths)):
+        path_congestion = 0
+        for edge in player.to_edge_list(player.paths[i]):
+            path_congestion += effective_congestion_dict[edge]
+        actual_congestion += player.strategy[i] * path_congestion
+
+    return actual_congestion - opt.fun
        
 def gradient_descent(G, players, x_stepsize):
 
@@ -203,57 +216,6 @@ def f(G, players):
     for cong in congestion_dict.values():
         cong_sum += cong
     return cong_sum
-
-def calculate_nash_gap(G, players):
-    nash_gaps = {}
-
-    # For each player
-    for player_name, player in players.items():
-
-        #print("Current lambdas = ",player.l)
-
-        # Get the current utility for the player
-        current_utility = f(G, players) + player.l * (sum(player.strategy * np.array(player.path_lengths)) - player.gas) - 2*0.0001*player.l
-
-        # Define the objective function for the optimization problem
-        def objective(x_i):
-
-            # Update player's strategy with x_i
-            player.strategy = x_i
-
-            # Calculate utility with new strategy
-            new_utility = f(G, players) + player.l * (sum(player.strategy * np.array(player.path_lengths)) - player.gas)- 2*0.0001*player.l
-            
-            # Return -new_utility for minimization problem
-            return -new_utility
-
-        # Define the constraints for the optimization problem
-        constraints = ({'type': 'ineq', 'fun': lambda x_i: sum(x_i * np.array(player.path_lengths) - player.gas)},
-                       {'type': 'eq', 'fun': lambda x_i: sum(x_i) - 1}) # the strategy should sum up to 1 
-
-        # Define the bounds for the optimization problem
-        bounds = [(0, 1)] * len(player.strategy)
-
-        # Define the initial guess for the optimization problem
-        x0 = [0.25,0.25,0.25,0.25,0]#player.strategy
-        #print("x0 = ",x0)
-
-        # Solve the optimization problem
-        #print(player.gas)
-        res = minimize(objective, x0, constraints=constraints, bounds=bounds)
-        print(res)
-
-        print("Current Utility = ",current_utility)
-        print("Solution = ",-res.fun)
-        sys.exit(0)
-        
-        # Calculate the Nash Gap for the player
-        nash_gap = -res.fun - current_utility
-
-        # Store the Nash Gap in the dictionary
-        nash_gaps[player_name] = nash_gap
-
-    return nash_gaps
 
 class Player:
 
@@ -283,6 +245,9 @@ class Player:
         self.strategy = np.array([x / sum_strategy for x in self.strategy])
         self.strategy = np.array([1,0,0,0,0])
 
+    def to_edge_list(self,path):
+        return [(path[i], path[i+1]) for i in range(len(path) - 1)]
+
     def primal_gradient(self,exp_visitation):
 
         self_load = single_expected_load(self.G, self.strategy, self.paths)        
@@ -291,7 +256,7 @@ class Player:
         cong_sums = 0
         for i in congestion_dict.values():
             cong_sums += i
-        print(cong_sums)
+        # print(cong_sums)
 
         primal_gradient = [self.congestion_of_path(path, congestion_dict) for path in self.paths]
         #primal_gradient_normalized = primal_gradient / np.linalg.norm(primal_gradient)
