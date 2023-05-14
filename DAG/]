@@ -4,8 +4,6 @@ import random
 import numpy as np
 from scipy.stats import wasserstein_distance
 from scipy.special import rel_entr
-from scipy.optimize import linprog
-
 import math
 import matplotlib.animation as anim
 import pprint
@@ -182,12 +180,12 @@ def update_lambda(players, step_size):
 def calculate_nash_gap(G, players):
     total_cong_dict = total_expected_load(G,players)
     gap = 0
-    for player in players.values():
+    for player in players:
         gap += player_nash_gap(G, player, total_cong_dict)
     return gap
 
 def player_nash_gap(G, player, exp_visitation):
-    self_load = single_expected_load(player.G, player.strategy, player.paths)
+    self_load = single_expected_load(self.G, self.strategy, self.paths)
     rest_load = {key: exp_visitation[key] - self_load[key] for key in exp_visitation.keys()}
      
     # pure_strategy_cost is a vector containing [f(x_1), f(x_2), ..., f(x_5)]
@@ -195,7 +193,7 @@ def player_nash_gap(G, player, exp_visitation):
     pure_strategy_cost = [None for _ in player.paths]
     for i in range(len(player.paths)):
         cost = 0
-        for edge in player.to_edge_list(player.paths[i]):
+        for edge in to_edge_list(player.paths[i]):
             cost += 1 + rest_load[edge]
         pure_strategy_cost[i] = cost
 
@@ -205,22 +203,14 @@ def player_nash_gap(G, player, exp_visitation):
     # constraints for the linear program: ask rose about this if you're confused
     # if you're confused and you're rose, this is in your black notebook somewhere. good luck
     obj = pure_strategy_cost
-    lhs_ineq = [player.path_lengths]
-    rhs_ineq = [player.gas]
-    lhs_eq = [[1 for _ in player.paths]]
+    lhs_ineq = player.path_lengths
+    rhs_ineq = player.gas
+    lhs_eq = [1 for _ in player.paths]
     rhs_eq = [1]
-    bnd = [(0, 1) for _ in player.paths]
 
     opt = linprog(c=obj, A_ub=lhs_ineq, b_ub=rhs_ineq,
                   A_eq=lhs_eq, b_eq=rhs_eq, bounds=bnd,
-                  method="interior-point")
-
-    if not opt.success:
-        # problem!
-        print('linear program was non-feasible somehow? exiting')
-        sys.exit(-1)
-
-    return opt.fun
+                  method="revised simplex")
        
 def gradient_descent(G, players, x_stepsize):
 

@@ -23,6 +23,7 @@ from lib import Player
 from lib import create_dag
 from lib import update_lambda
 from lib import gradient_descent
+from lib import calculate_nash_gap
 
 G = create_dag()
 players = dict()
@@ -52,6 +53,8 @@ for t in range(t_iterates):
 
     # Run a gradient descent step on Psi
     gradient_descent(G, players, x_stepsize)
+
+    print(calculate_nash_gap(G, players))
 
     # After each gradient descent step, plot the strategy of each player
     fig, axs = plt.subplots(len(players), 1, figsize=(8, 15))
